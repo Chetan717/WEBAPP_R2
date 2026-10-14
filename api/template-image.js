@@ -1,5 +1,5 @@
 // Emergency canvas fallback for public, non-sensitive, explicitly whitelisted
-// CDN template raster images only. Prefer fixing CDN CORS at Cloudflare.
+// CDN templates, top-upline and footer raster images. Prefer fixing CDN CORS at Cloudflare.
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // stay below Vercel Function body limit
 const CDN_HOST = "cdn.mlmposter.com";
 const ALLOWED_MIME = /^image\/(?:webp|png|jpeg|avif|gif)(?:\s*;|$)/i;
@@ -9,7 +9,7 @@ export function isAllowedTemplateImageUrl(raw) {
     const u = new URL(String(raw || ""));
     return u.protocol === "https:" && u.hostname === CDN_HOST &&
       !u.username && !u.password && (!u.port || u.port === "443") &&
-      u.pathname.startsWith("/templates/") &&
+      ["/templates/", "/topuplineframe/", "/footers/"].some((prefix) => u.pathname.startsWith(prefix)) &&
       /\.(?:webp|png|jpe?g|avif|gif)$/i.test(u.pathname);
   } catch { return false; }
 }

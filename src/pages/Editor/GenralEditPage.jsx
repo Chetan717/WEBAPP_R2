@@ -1793,7 +1793,7 @@ function GeneralEditPage({
     return <>{nodes}</>;
   }
 
-  const [Imagefooter] = useImage(selectedFooterFrame?.value, "anonymous");
+  const [Imagefooter] = useTemplateCanvasImage(selectedFooterFrame?.value || "");
   const [Imagel2] = useImage(logoEntries?.[0]?.link || "", "anonymous");
 
   const [Imagel3] = useImage(logoEntries?.[1]?.link || "", "anonymous");
@@ -1810,7 +1810,7 @@ function GeneralEditPage({
     incomeFormData?.proofImage || "",
     "anonymous",
   );
-  const [ImagetopFrame] = useImage(selectedTopFrame?.value || "", "anonymous");
+  const [ImagetopFrame] = useTemplateCanvasImage(selectedTopFrame?.value || "");
   const [Imagetop1] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[0] || ""));
   const [Imagetop2] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[1] || ""));
   const [Imagetop3] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[2] || ""));

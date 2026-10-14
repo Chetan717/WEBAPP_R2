@@ -150,7 +150,7 @@ export default function RemoveBgLoadingOverlay({
             </div>
             <div className="mt-1 flex items-center justify-between text-[10px] font-semibold">
               <span className="text-muted-foreground">AI Processing</span>
-              <span className="text-accent">{safePct}%</span>
+              <span className="text-accent">wait..</span>
             </div>
           </div>
 

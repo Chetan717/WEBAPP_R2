@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { db } from "@firebase-config";
-import { collection, getDocs } from "firebase/firestore";
+import React, { useState, useEffect } from "react";
+import topUplineFrameData from "../../data/topuplineframes.json";
+import footerFrameData from "../../data/footerframes.json";
 import MlmEditPage from "./MlmEditPage";
 import GeneralEditPage from "./GenralEditPage";
 import FooterSelect from "./utils/FooterSelect";
 import TopuplineSelect from "./utils/TopuplineSelect";
-import { COLLECTIONS } from "../../collections";
 export const GENERAL_SELECT_TYPES = [
   { name: "Trending", value: "Trending" },
   { name: "Festival", value: "Festival" },
@@ -27,10 +26,12 @@ export const GENERAL_SELECT_TYPES = [
   },
 ];
 
-const collectionCache = {
-  data: null,
-  isFetched: false,
-};
+// Static Editor frame catalogs, in the same local-JSON style as company logos.
+// These are bundled by Vite: opening Editor does NOT query mlmgraphics.
+const frameCatalogs = [
+  ...(Array.isArray(topUplineFrameData) ? topUplineFrameData : []),
+  ...(Array.isArray(footerFrameData) ? footerFrameData : []),
+];
 
 function groupByGraphicsType(data) {
   return data.reduce((acc, item) => {
@@ -42,53 +43,12 @@ function groupByGraphicsType(data) {
   }, {});
 }
 
+const staticGraphicsMap = groupByGraphicsType(frameCatalogs);
+
 function MainEditor() {
-  const [collectionData, setCollectionData] = useState(collectionCache.data);
-  const [loading, setLoading] = useState(!collectionCache.isFetched);
-  const [error, setError] = useState(null);
-  const isMounted = useRef(true);
-
+  // Local data is available immediately; no Firestore fetch or loading spinner.
+  const graphicsMap = staticGraphicsMap;
   const [middaleImage, setmiddaleImage] = useState(null);
-  useEffect(() => {
-    isMounted.current = true;
-
-    if (collectionCache.isFetched) return;
-
-    const fetchMlmGraphics = async () => {
-      try {
-        setLoading(true);
-
-        const snapshot = await getDocs(collection(db, COLLECTIONS.MLMGRAPHICS));
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        if (isMounted.current) {
-          collectionCache.data = data;
-          collectionCache.isFetched = true;
-          setCollectionData(data);
-        }
-      } catch (err) {
-        if (isMounted.current) setError("Unable to load the editor. Please try again.");
-      } finally {
-        if (isMounted.current) setLoading(false);
-      }
-    };
-
-    fetchMlmGraphics();
-
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
-  // ── Grouped map — recomputes only when collectionData changes ─────
-  // graphicsMap = { TopUplineFrames: [...], Footers: [...] }
-  const graphicsMap = useMemo(
-    () => (collectionData ? groupByGraphicsType(collectionData) : {}),
-    [collectionData],
-  );
 
   function getSelType() {
     try {
@@ -114,9 +74,7 @@ function MainEditor() {
   );
   const [isOpenFtr, setIsOpenFtr] = useState(false);
 
-  // The editor does not need to wait for optional top/footer graphics. Render
-  // it immediately and attach those defaults as soon as their background
-  // Firestore request completes.
+  // Static local JSON provides defaults immediately. User selection stays intact.
   useEffect(() => {
     if (!selectedTopFrame && frames.length > 0) {
       setSelectedTopFrame(frames[0]);
@@ -131,16 +89,6 @@ function MainEditor() {
 
   return (
     <>
-      {loading && (
-        <div className="fixed top-16 right-3 z-[90] rounded-full bg-background/90 border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
-          Loading editor tools…
-        </div>
-      )}
-      {error && (
-        <div className="fixed top-16 right-3 z-[90] rounded-xl bg-danger/10 border border-danger/20 px-3 py-2 text-[11px] text-danger shadow-sm">
-          Optional editor tools could not load.
-        </div>
-      )}
       {/* {isGeneralType ? ( */}
         <GeneralEditPage
           graphicsMap={graphicsMap}

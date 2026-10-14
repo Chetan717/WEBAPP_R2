@@ -78,13 +78,13 @@ async function loadBlobFallback(url, signal) {
   }
 }
 
-/** Only publicly served template images can use the emergency same-origin fallback.
- * User/profile assets remain governed by their separate private image flow. */
+/** Only publicly served template and editor-frame images can use the emergency
+ * same-origin fallback. User/profile assets remain on their separate image flow. */
 export function isCdnTemplateImageUrl(value) {
   try {
     const url = new URL(value);
     return url.protocol === "https:" && url.hostname === "cdn.mlmposter.com" &&
-      url.pathname.startsWith("/templates/") &&
+      ["/templates/", "/topuplineframe/", "/footers/"].some((prefix) => url.pathname.startsWith(prefix)) &&
       /\.(webp|png|jpe?g|avif|gif)$/i.test(url.pathname);
   } catch { return false; }
 }

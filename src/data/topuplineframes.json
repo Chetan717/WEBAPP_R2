@@ -1,0 +1,26 @@
+[
+  {
+    "id": "TOPUPLINE_DOC_ID",
+    "GraphicName": "Top Upline Background",
+    "GraphicsType": "TopUplineFrames",
+    "Active": true,
+    "GraphicsLinks": [
+      {
+        "id": 1,
+        "value": "https://cdn.mlmposter.com/topuplineframe/1sttp.webp"
+      },
+      {
+        "id": 2,
+        "value": "https://cdn.mlmposter.com/topuplineframe/2ndtp.webp"
+      },
+      {
+        "id": 3,
+        "value": "https://cdn.mlmposter.com/topuplineframe/3rdtp.webp"
+      },
+      {
+        "id": 4,
+        "value": "https://cdn.mlmposter.com/topuplineframe/4thtp.webp"
+      }
+    ]
+  }
+]

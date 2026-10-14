@@ -1,0 +1,18 @@
+[
+  {
+    "id": "jhghs6345673",
+    "GraphicName": "Footer Frame",
+    "GraphicsType": "Footers",
+    "Active": true,
+    "GraphicsLinks": [
+      {
+        "id": 1,
+        "value": "https://cdn.mlmposter.com/footers/1791459461834_ittwds.webp"
+      },
+      {
+        "id": 2,
+        "value": "https://cdn.mlmposter.com/footers/1791458983814_513d44.webp"
+      }
+    ]
+  }
+]
