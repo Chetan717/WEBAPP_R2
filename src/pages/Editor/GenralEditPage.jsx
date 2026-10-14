@@ -75,6 +75,8 @@ import useResilientCanvasImage, {
   normalizeImageSources,
 } from "../../hooks/useResilientCanvasImage";
 import { getProfileReadCandidates } from "../../utils/profileR2Urls";
+import FlipTapHint from "./components/FlipTapHint";
+import { getFlipHintPosition } from "./utils/flipHintGeometry";
 
 const fs = (n) => n;
 
@@ -755,6 +757,10 @@ function GeneralEditPage({
     if (previewFormData) setMlmForm(previewFormData);
   }, [previewFormData]);
 
+  // Editor-only guidance: hints are DOM overlays, never Konva/export content.
+  const [flipHintPositions, setFlipHintPositions] = useState({ profile: null, rank: null });
+  const [dismissedFlipHints, setDismissedFlipHints] = useState({ profile: false, rank: false });
+
   const [isImageSelected, setIsImageSelected] = useState(false);
   const [selectedImageType, setSelectedImageType] = useState(null);
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0, width: 0 });
@@ -1261,6 +1267,9 @@ function GeneralEditPage({
     setIsImageSelected(true);
     setSelectedImageType(type);
     if (justDraggedRef.current) return;
+    if (type === "profile" || type === "rank") {
+      setDismissedFlipHints((previous) => ({ ...previous, [type]: true }));
+    }
     flipImageInPlace(type);
   };
 
@@ -1876,6 +1885,31 @@ function GeneralEditPage({
     }, 50);
     return () => clearTimeout(t);
   }, [ImageRank, ImageChief, isMeeting]);
+
+  // Read the *rendered* Konva photo rectangles so the hints track both
+  // image slots on every template type, orientation and responsive width.
+  useLayoutEffect(() => {
+    if (previewOnly || isVideoUnavailable || !bgImage) {
+      setFlipHintPositions((previous) =>
+        previous.profile || previous.rank ? { profile: null, rank: null } : previous,
+      );
+      return;
+    }
+    const profile = ImageProfile ? getFlipHintPosition(profileImageRef.current, STAGE_WIDTH, STAGE_HEIGHT) : null;
+    const rank = (isMeeting ? ImageChief : ImageRank)
+      ? getFlipHintPosition(rankImageRef.current, STAGE_WIDTH, STAGE_HEIGHT)
+      : null;
+    setFlipHintPositions((previous) =>
+      JSON.stringify(previous) === JSON.stringify({ profile, rank })
+        ? previous
+        : { profile, rank },
+    );
+  }, [
+    previewOnly, isVideoUnavailable, bgImage, selected?.url, isMeeting,
+    isRight, isSubGeneralType, isSubGeneralType2, isAchievement,
+    ImageProfile, ImageRank, ImageChief, footerImgFlip, profileAttrs,
+    rankAttrs, stageScale,
+  ]);
 
   const formname = getAchieverDisplayName(mlmForm?.achiever);
   const formcity = mlmForm?.achiever?.city || "";
@@ -3989,8 +4023,14 @@ function GeneralEditPage({
                           offsetX={curOffsetX}
                           width={fW}
                           height={fH}
-                          onClick={() => setFooterImgFlip((f) => !f)}
-                          onTap={() => setFooterImgFlip((f) => !f)}
+                          onClick={() => {
+                            setFooterImgFlip((f) => !f);
+                            setDismissedFlipHints((previous) => ({ ...previous, profile: true }));
+                          }}
+                          onTap={() => {
+                            setFooterImgFlip((f) => !f);
+                            setDismissedFlipHints((previous) => ({ ...previous, profile: true }));
+                          }}
                         />
                       );
                     })()}
@@ -4768,6 +4808,18 @@ function GeneralEditPage({
               </Layer>
             </Stage>
           </div>
+
+          {/* Editor-only DOM hints: not children of Konva Stage, so never exported. */}
+          {!previewOnly && !isVideoUnavailable && !!bgImage && (
+            <div className="absolute inset-0 z-[15] pointer-events-none" aria-hidden="true">
+              {!dismissedFlipHints.rank && flipHintPositions.rank && (
+                <FlipTapHint target="rank" position={flipHintPositions.rank} delayMs={480} />
+              )}
+              {!dismissedFlipHints.profile && flipHintPositions.profile && (
+                <FlipTapHint target="profile" position={flipHintPositions.profile} delayMs={0} />
+              )}
+            </div>
+          )}
 
           {/* Preview-only logo: outside the Konva Stage so exports stay clean. */}
           {/* {bgStatus === "loaded" && (
