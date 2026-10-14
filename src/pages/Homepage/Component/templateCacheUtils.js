@@ -52,6 +52,10 @@ export function preloadImage(src) {
   if (!src || seenImages.has(src) || _inFlight.has(src)) return;
   _inFlight.add(src);
   const img = new Image();
+  // The editor exports to canvas: image preloads must use its anonymous
+  // CORS request mode, not a potentially opaque cache entry.
+  if (/^https?:\/\//i.test(src)) img.crossOrigin = "anonymous";
+  img.decoding = "async";
   img.onload = () => {
     _inFlight.delete(src);
     markImageSeen(src); // only mark seen after pixels are truly ready

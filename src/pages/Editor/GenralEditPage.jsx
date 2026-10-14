@@ -11,6 +11,7 @@ import { Stage, Layer, Text, Image, Transformer, Group } from "react-konva";
 import Konva from "konva";
 Konva.hitOnDragEnabled = true;
 import useImage from "use-image";
+import useTemplateCanvasImage from "../../hooks/useTemplateCanvasImage";
 import ListOfTemplates from "./components/ListOfTemplates";
 import AiRetouchModal from "./AiRetouchModal";
 import CaptionModal from "../../components/CaptionModal";
@@ -1590,7 +1591,7 @@ function GeneralEditPage({
   const incomeDay = incomeFormData?.noOfDay || "";
   const incomeType = incomeFormData?.typeOfIncome || "";
 
-  const [bgImage, bgStatus] = useImage(`${selected?.url || ""}`, "anonymous");
+  const [bgImage, bgStatus, retryBackground] = useTemplateCanvasImage(selected?.url || "");
   if (bgStatus === "loaded" || bgImage) bgFirstLoadDoneRef.current = true;
   const selectedVideoUrl =
     selected?.backgroundVideoUrl || selected?.videoUrl || null;
@@ -2910,7 +2911,7 @@ function GeneralEditPage({
             touchAction: "none",
           }}
         >
-          {bgStatus === "loading" && !isVideoUnavailable && (
+          {(bgStatus === "loading" || bgStatus === "retrying") && !isVideoUnavailable && (
             <div
               className="absolute inset-0 z-10 overflow-hidden pointer-events-none"
               style={{
@@ -2954,6 +2955,16 @@ function GeneralEditPage({
                   />
                 </div>
               </div>
+            </div>
+          )}
+          {bgStatus === "failed" && selected?.url && !isVideoUnavailable && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-background/95 px-5 text-center">
+              <p className="text-sm font-semibold text-foreground">Design image could not load.</p>
+              <p className="text-xs text-muted-foreground">Check your connection or CDN image access.</p>
+              <button type="button" onClick={retryBackground}
+                className="rounded-xl bg-[#2F80EA] px-5 py-2.5 text-sm font-semibold text-white">
+                Retry image
+              </button>
             </div>
           )}
           {isVideoUnavailable && (

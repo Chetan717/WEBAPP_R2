@@ -145,6 +145,33 @@ function PersistentPages({
   const homeHeaderHiddenRef = useRef(false);
   const [homeHeaderHidden, setHomeHeaderHidden] = useState(false);
 
+  // Prefetch the large Konva editor only when Home is idle on a usable
+  // connection. This moves chunk download off the template-tap critical path
+  // without competing with the initial home/catalog requests on slow phones.
+  useEffect(() => {
+    if (!isHome || !authenticated || !ready) return undefined;
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (connection?.saveData || /(^|-)2g$/i.test(connection?.effectiveType || "")) return undefined;
+    let cancelled = false;
+    let idleId = null;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      const warm = () => { if (!cancelled) void import("./pages/Editor/MainEditor").catch(() => {}); };
+      if (typeof window.requestIdleCallback === "function") {
+        idleId = window.requestIdleCallback(warm, { timeout: 8000 });
+      } else {
+        warm();
+      }
+    }, 3500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (idleId !== null && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleId);
+      }
+    };
+  }, [isHome, authenticated, ready]);
+
   const [homeReady, setHomeReady] = useState(
     () => isHome && authenticated && ready,
   );

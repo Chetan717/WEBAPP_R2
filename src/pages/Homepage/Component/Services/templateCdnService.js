@@ -133,7 +133,9 @@ async function fetchCatalogPayload(path) {
       const payload = await response.clone().json();
       memory.set(url, payload);
       rememberLastUrl(path, url);
-      if (cache) await cache.put(url, response).catch(() => null);
+      // CacheStorage persistence can take seconds on mobile WebViews. The
+      // payload is already in memory; it must not block editor navigation.
+      if (cache) void cache.put(url, response).catch(() => null);
       return payload;
     } catch {
       // Offline/transient CDN issue: use the last successfully cached version

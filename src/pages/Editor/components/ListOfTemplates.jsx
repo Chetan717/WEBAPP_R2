@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import VirtualTemplateGrid from "./VirtualTemplateGrid";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@firebase-config";
 import { COLLECTIONS } from "../../../collections";
@@ -33,7 +34,7 @@ import {
   isEverydayMomentType,
 } from "../../../utils/everydayMoments";
 
-const BATCH_SIZE = 20;
+const BATCH_SIZE = 16;
 
 const PRESET_VIDEO_ITEMS = [];
 const _editorTemplateCache = new Map();
@@ -151,10 +152,17 @@ const SHIMMER_BG = {
   animation: "shimmerSlide 1.2s ease infinite",
 };
 
-function LazyImage({ src, alt }) {
+const LazyImage = React.memo(function LazyImage({ src, alt }) {
   const wrapperRef = useRef(null);
   const [realSrc, setRealSrc] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setRealSrc(null);
+    setLoaded(false);
+    setFailed(false);
+  }, [src]);
 
   useEffect(() => {
     const el = wrapperRef.current;
@@ -177,13 +185,17 @@ function LazyImage({ src, alt }) {
       ref={wrapperRef}
       className="absolute inset-0 w-full h-full overflow-hidden"
     >
-      {!loaded && (
-        <div className="absolute inset-0 bg-muted/40" style={SHIMMER_BG} />
+      {!loaded && !failed && (
+        <div className="absolute inset-0 bg-muted/40" />
       )}
+      {failed && <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-[10px] text-muted-foreground">Image unavailable</div>}
       {realSrc && (
         <img
           src={realSrc}
           alt={alt}
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
           onLoad={() => setLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
             loaded ? "opacity-100" : "opacity-0"
@@ -192,9 +204,9 @@ function LazyImage({ src, alt }) {
       )}
     </div>
   );
-}
+});
 
-function LazyVideo({ src }) {
+function LazyVideo({ src, isSelected }) {
   const wrapperRef = useRef(null);
   const videoRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -214,8 +226,8 @@ function LazyVideo({ src }) {
     const video = videoRef.current;
     if (!video || !src) return;
 
-    if (isVisible) {
-      if (video.src !== src) video.src = src;
+    if (isVisible && isSelected) {
+      if (video.getAttribute("src") !== src) video.setAttribute("src", src);
       const playPromise = video.play();
       if (playPromise && typeof playPromise.catch === "function") {
         playPromise.catch(() => {});
@@ -225,7 +237,7 @@ function LazyVideo({ src }) {
       video.removeAttribute("src");
       video.load();
     }
-  }, [isVisible, src]);
+  }, [isVisible, src, isSelected]);
 
   return (
     <div ref={wrapperRef} className="absolute inset-0 w-full h-full">
@@ -294,21 +306,22 @@ function LoadingGrid() {
   );
 }
 
-function Tile({ item, isSelected, onSelect, isVideo }) {
+const Tile = React.memo(function Tile({ item, isSelected, onSelect, isVideo }) {
   return (
     <button
       type="button"
       onPointerEnter={() => preloadCanvasAsset(item)}
       onPointerDown={() => preloadCanvasAsset(item)}
       onClick={() => onSelect(item)}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "90px 90px" }}
       className={`relative aspect-square overflow-hidden rounded-[14px] border-2 bg-[#edf1f7] dark:bg-[#1b2536] transition-all duration-150 focus:outline-none ${
         isSelected
           ? "border-[#2F80EA] shadow-[0_6px_16px_rgba(44,115,232,0.15)]"
           : "border-transparent hover:border-[#9ec3ff]"
       }`}
     >
-      {isVideo && (item.backgroundVideoUrl || item.backgroundVideoUrl) ? (
-        <LazyVideo src={item.backgroundVideoUrl || item.backgroundVideoUrl} />
+      {isVideo && item.backgroundVideoUrl ? (
+        <LazyVideo src={item.backgroundVideoUrl} isSelected={isSelected} />
       ) : item.suggestionImage ? (
         <LazyImage src={item.suggestionImage} alt="template" />
       ) : (
@@ -362,7 +375,7 @@ function Tile({ item, isSelected, onSelect, isVideo }) {
       )}
     </button>
   );
-}
+});
 
 function TabBtn({ active, onClick, icon, label, count }) {
   return (
@@ -886,14 +899,15 @@ export default function ListOfTemplates({
   useEffect(() => {
     // Preload only the first visible row to keep mobile data/memory controlled
     // while making the most likely taps appear instantly on the canvas.
-    visibleTabItems.slice(0, 6).forEach(preloadCanvasAsset);
+    visibleTabItems.slice(0, 2).forEach(preloadCanvasAsset);
   }, [visibleTabItems]);
 
   const loadMore = useCallback(() => {
     const items = tabItemsRef.current;
     if (tabRenderedCount.current >= items.length) return;
     setLoadingMore(true);
-    setTimeout(() => {
+    // Keep scroll responsive by committing a small batch in one frame.
+    window.requestAnimationFrame(() => {
       const next = items.slice(
         tabRenderedCount.current,
         tabRenderedCount.current + BATCH_SIZE,
@@ -901,7 +915,7 @@ export default function ListOfTemplates({
       setVisibleTabItems((prev) => [...prev, ...next]);
       tabRenderedCount.current += next.length;
       setLoadingMore(false);
-    }, 100);
+    });
   }, []);
 
   useEffect(() => {
@@ -1083,7 +1097,7 @@ export default function ListOfTemplates({
         </div>
       </div>
 
-      <div className="w-full flex-1 min-h-0 overflow-y-auto px-4 pb-6">
+      <div data-template-scroll="true" className="w-full flex-1 min-h-0 overflow-y-auto px-4 pb-6" style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
         {error && (
           <div className="rounded-xl bg-danger/10 border border-danger/20 p-3 text-xs text-danger mb-2">
             {error}
@@ -1108,7 +1122,7 @@ export default function ListOfTemplates({
           />
         )}
 
-        {!loading && visibleTabItems.length > 0 &&
+        {!loading && tabItems.length > 0 &&
           (isEverydayMoments ? (
             <div className="space-y-5">
               {visibleSubtypeSections.map((section) => (
@@ -1137,8 +1151,9 @@ export default function ListOfTemplates({
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
-              {visibleTabItems.map((item, idx) => (
+            <VirtualTemplateGrid
+              items={tabItems}
+              renderTile={(item, idx) => (
                 <Tile
                   key={`${item._template?.serial}-${item.id}-${idx}`}
                   item={item}
@@ -1146,11 +1161,11 @@ export default function ListOfTemplates({
                   onSelect={handleSelect}
                   isVideo={activeTab === "video"}
                 />
-              ))}
-            </div>
+              )}
+            />
           ))}
 
-        <div ref={sentinelRef} className="h-1" />
+        {isEverydayMoments && <div ref={sentinelRef} className="h-1" />}
 
         {loadingMore && (
           <div className="flex justify-center py-3">
