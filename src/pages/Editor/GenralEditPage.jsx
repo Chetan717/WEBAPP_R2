@@ -279,6 +279,7 @@ export const GENERAL_SELECT_TYPES = [
 ];
 export const GENERAL_SELECT_TYPES2 = [
   { name: "Good_Morning", value: "Good_Morning" },
+  { name: "Navratri Special", value: "Navratri_Special" },
   { name: "Sport", value: "Sport" },
   { name: "Daily_Life", value: "Daily_Life" },
   { name: "Health_Tips", value: "Health_Tips" },

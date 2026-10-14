@@ -3,6 +3,7 @@ import { isValidAllTemplatesReturnPath } from "./allTemplatesNavigation.js";
 const GENERAL_TEMPLATE_TYPES = new Set([
   "Trending",
   "Festival",
+  "Navratri_Special", // Form-free design: open Editor like Good Morning.
   "Latest_update",
   "Product",
   "Motivational",

@@ -27,8 +27,7 @@ function getTouchDist(touches) {
 }
 
 // ── Crop box helpers ──────────────────────────────────────────────
-const HANDLE_VIS = 14; // visual corner square size
-const HANDLE_HIT = 36; // touch hit area (larger for fingers)
+const HANDLE_HIT = 36; // invisible, large finger-friendly resize target
 const MIN_BOX_W = 60;
 
 function initBox(cw, ch, ratio) {
@@ -46,7 +45,7 @@ function initBox(cw, ch, ratio) {
 }
 
 function initBoxInBounds(bounds, ratio) {
-  const margin = 0.98;
+  const margin = 0.92;
   let w = bounds.w * margin;
   let h = w / ratio;
   if (h > bounds.h * margin) {
@@ -269,7 +268,7 @@ export default function ImageEditorCanvas({
     const measure = () => {
       if (!containerRef.current) return;
       const { width } = containerRef.current.getBoundingClientRect();
-      const cw = Math.max(200, Math.min(width - 16, 360));
+      const cw = Math.max(160, Math.min(width - 48, 360)); // 24px safe gutter on mobile
       const ch = Math.min(Math.round(cw / RATIO), 400);
       if (cw !== canvasSzRef.current.w || ch !== canvasSzRef.current.h) {
         canvasSzRef.current = { w: cw, h: ch };
@@ -406,12 +405,12 @@ export default function ImageEditorCanvas({
     ctx.fillRect(fx + fw, fy, cw - fx - fw, fh);
 
     // Border
-    ctx.strokeStyle = "rgba(255,255,255,0.9)";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(255,255,255,0.70)";
+    ctx.lineWidth = 1;
     ctx.strokeRect(fx, fy, fw, fh);
 
     // Grid lines
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
     ctx.lineWidth = 0.7;
     for (let i = 1; i < 3; i++) {
       ctx.beginPath();
@@ -424,36 +423,8 @@ export default function ImageEditorCanvas({
       ctx.stroke();
     }
 
-    // Corner L-brackets
-    const BL = 18,
-      BT = 3;
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = BT;
-    ctx.lineCap = "square";
-    [
-      [fx, fy, 1, 1],
-      [fx + fw, fy, -1, 1],
-      [fx, fy + fh, 1, -1],
-      [fx + fw, fy + fh, -1, -1],
-    ].forEach(([x, y, sx, sy]) => {
-      ctx.beginPath();
-      ctx.moveTo(x + sx * BL, y);
-      ctx.lineTo(x, y);
-      ctx.lineTo(x, y + sy * BL);
-      ctx.stroke();
-    });
-
-    // Corner drag handles (white squares)
-    const hs = HANDLE_VIS;
-    ctx.fillStyle = "#ffffff";
-    [
-      [fx, fy],
-      [fx + fw, fy],
-      [fx, fy + fh],
-      [fx + fw, fy + fh],
-    ].forEach(([cx, cy]) => {
-      ctx.fillRect(cx - hs / 2, cy - hs / 2, hs, hs);
-    });
+    // Keep only the subtle outline and grid: corner squares/brackets are intentionally hidden.
+    // hitCorner() still uses a 36px invisible touch zone for easy resizing.
 
     ctx.restore();
   }, [RATIO]);

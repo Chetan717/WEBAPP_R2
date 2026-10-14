@@ -345,6 +345,7 @@ const GENERAL_SELECT_TYPES = new Set([
   // "Trending",
   "Today_Trending",
   "Festival",
+  "Navratri_Special", // Direct Editor; no MLM form.
   "Latest_update",
   "Product",
   "Motivational",
