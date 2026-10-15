@@ -678,7 +678,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                       src={item.image}
                       className={`${
                         isCapping
-                          ? "h-full w-full object-contain"
+                          ? "h-full w-full object-cover"
                           : "h-full w-full object-cover"
                       }`}
                       alt={cardLabel}
