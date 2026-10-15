@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { findNewSubtypeAnnouncement } from './src/utils/newSubtypeAnnouncement.js';
+const data=new Map();
+const storage={getItem:(k)=>data.has(k)?data.get(k):null,setItem:(k,v)=>data.set(k,v)};
+const scope=(items)=>[{type:'Rank',subtypeSections:items.map(([subtype,url])=>({subtype,items:[{url,_template:{id:subtype}}]}))}];
+assert.equal(findNewSubtypeAnnouncement('company-A',scope([['A','url-a']]),storage),null);
+assert.equal(findNewSubtypeAnnouncement('company-A',scope([['A','new-url-a']]),storage),null);
+assert.equal(findNewSubtypeAnnouncement('company-A',scope([['A','url-a'],['B','url-b']]),storage).subtype,'B');
+assert.equal(findNewSubtypeAnnouncement('company-A',scope([['A','url-a'],['B','url-b']]),storage),null);
+assert.equal(findNewSubtypeAnnouncement('company-B',scope([['A','url-a'],['B','url-b']]),storage),null);
+console.log('5 tests passed');

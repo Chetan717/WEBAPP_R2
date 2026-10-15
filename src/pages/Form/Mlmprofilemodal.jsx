@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { getUser as _getAuthUser } from "../../utils/authStorage";
+import { getUser as _getAuthUser, VERIFIED_USER_CHANGED_EVENT } from "../../utils/authStorage";
 import { db, app } from "@firebase-config";
 import {
   collection,
@@ -553,6 +553,19 @@ export default function MLMProfilePage() {
   ).trim();
 
   const [form, setForm] = useState(() => initialForm(userMobile, signupName));
+  // Signup identity may arrive asynchronously after the profile screen mounts.
+  // Only prefill an empty name; never overwrite a name the user has edited.
+  useEffect(() => {
+    const prefillSignupName = () => {
+      const identity = getUserMlm();
+      const name = String(identity.name || identity.fullName || identity.displayName || "").trim();
+      if (!name) return;
+      setForm((current) => current.name?.trim() ? current : { ...current, name });
+    };
+    prefillSignupName();
+    window.addEventListener(VERIFIED_USER_CHANGED_EVENT, prefillSignupName);
+    return () => window.removeEventListener(VERIFIED_USER_CHANGED_EVENT, prefillSignupName);
+  }, []);
   const [errors, setErrors] = useState({});
   const [step, setStep] = useState("form");
   const [editorSrc, setEditorSrc] = useState(null);
