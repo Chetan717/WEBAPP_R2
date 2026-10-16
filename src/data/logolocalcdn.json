@@ -656,5 +656,33 @@
         "size": "square"
       }
     ]
+  },
+  {
+    "ID": "CO26f7vJIdKEbRwJK7aH",
+    "name": "Vishvam Ayurveda",
+    "logos": [
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1792144786098_ydkyk1.webp",
+        "size": "square"
+      },
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1792144786098_ydkyk1.webp",
+        "size": "square"
+      }
+    ]
+  },
+  {
+    "ID": "EUxylo0MwMYe3JMqHt4j",
+    "name": "Richway",
+    "logos": [
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1792145165945_n3iscy.webp",
+        "size": "rectangle"
+      },
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1792145165945_n3iscy.webp",
+        "size": "rectangle"
+      }
+    ]
   }
 ]
