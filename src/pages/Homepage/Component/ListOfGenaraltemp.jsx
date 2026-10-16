@@ -796,7 +796,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
               </div>
 
               <div className="px-0.5 pb-2">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   {everydayMomentCards.map(({ type, label, item }) => (
                     <button
                       key={type}
