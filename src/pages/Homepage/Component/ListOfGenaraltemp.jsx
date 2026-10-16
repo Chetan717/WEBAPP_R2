@@ -356,6 +356,11 @@ const GENERAL_SELECT_TYPES = new Set([
   "Leader_Quotes",
   "Health_Tips",
   "Greeting_Wishes",
+  "ATTITUDE",
+  "SPORTS",
+  "GOOD_THOUGHTS",
+  "MOTIVATION",
+  "PROVERS",
   "ThankYou_Banner_B",
   "ThankYou_Birthday_Anniversary",
 ]);

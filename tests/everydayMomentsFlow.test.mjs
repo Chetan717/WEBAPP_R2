@@ -26,7 +26,7 @@ const items = [
   },
 ];
 
-test("Everyday Moments contains only the seven requested Main Types in product order", () => {
+test("Everyday Moments contains the existing and five new General SelectTypes in product order", () => {
   assert.deepEqual(
     EVERYDAY_MOMENT_ENTRIES.map((entry) => entry.type),
     [
@@ -37,6 +37,11 @@ test("Everyday Moments contains only the seven requested Main Types in product o
       "Devotional_Spiritual",
       "Health_Tips",
       "Leader_Quotes",
+    "ATTITUDE",
+    "SPORTS",
+    "GOOD_THOUGHTS",
+    "MOTIVATION",
+    "PROVERS",
     ],
   );
   assert.equal(isEverydayMomentType("Good_Morning"), true);

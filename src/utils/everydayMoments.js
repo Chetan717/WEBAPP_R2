@@ -11,6 +11,13 @@ export const EVERYDAY_MOMENT_ENTRIES = Object.freeze([
   },
   { type: "Health_Tips", label: "Health Tips" },
   { type: "Leader_Quotes", label: "Leader Quotes" },
+  // New General SelectTypes belong only to Everyday Moments.
+  // MOTIVATION is independent of the existing "Motivational" category.
+  { type: "ATTITUDE", label: "Attitude" },
+  { type: "SPORTS", label: "Sports" },
+  { type: "GOOD_THOUGHTS", label: "Good Thoughts" },
+  { type: "MOTIVATION", label: "Motivation" },
+  { type: "PROVERS", label: "Provers" },
 ]);
 
 const EVERYDAY_MOMENT_TYPE_SET = new Set(

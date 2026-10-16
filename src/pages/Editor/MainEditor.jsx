@@ -13,6 +13,11 @@ export const GENERAL_SELECT_TYPES = [
   { name: "Latest Update", value: "Latest_update" },
   { name: "Motivational", value: "Motivational" },
   { name: "Good Morning", value: "Good_Morning" },
+  { name: "Attitude", value: "ATTITUDE" },
+  { name: "Sports", value: "SPORTS" },
+  { name: "Good Thoughts", value: "GOOD_THOUGHTS" },
+  { name: "Motivation", value: "MOTIVATION" }, // Separate from Motivational
+  { name: "Provers", value: "PROVERS" },
   { name: "Sport", value: "Sport" },
   { name: "Daily_Life", value: "Daily_Life" },
   { name: "Devotional / Spiritual", value: "Devotional_Spiritual" },

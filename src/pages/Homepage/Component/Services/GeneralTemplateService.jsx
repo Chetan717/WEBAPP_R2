@@ -53,6 +53,11 @@ const TYPE_GROUPS = [
     "Health_Tips",
     "Devotional_Spiritual",
     "Leader_Quotes",
+    "ATTITUDE",
+    "SPORTS",
+    "GOOD_THOUGHTS",
+    "MOTIVATION",
+    "PROVERS",
   ],
 ];
 export const TEMPLATE_GROUP_COUNT = TYPE_GROUPS.length;

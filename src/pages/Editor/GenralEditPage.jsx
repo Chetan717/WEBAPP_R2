@@ -282,6 +282,11 @@ export const GENERAL_SELECT_TYPES = [
 ];
 export const GENERAL_SELECT_TYPES2 = [
   { name: "Good_Morning", value: "Good_Morning" },
+  { name: "Attitude", value: "ATTITUDE" },
+  { name: "Sports", value: "SPORTS" },
+  { name: "Good Thoughts", value: "GOOD_THOUGHTS" },
+  { name: "Motivation", value: "MOTIVATION" }, // Separate from Motivational
+  { name: "Provers", value: "PROVERS" },
   { name: "Navratri Special", value: "Navratri_Special" },
   { name: "Sport", value: "Sport" },
   { name: "Daily_Life", value: "Daily_Life" },
