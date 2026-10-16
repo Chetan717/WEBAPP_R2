@@ -795,14 +795,14 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                 </button>
               </div>
 
-              <div className="-mx-1.5 overflow-x-auto scroll-smooth snap-x snap-mandatory px-1.5 pb-2 hide-scrollbar scroll-gpu md:-mx-3 md:px-3">
-                <div className="flex w-max min-w-full gap-3 pr-1.5">
+              <div className="px-0.5 pb-2">
+                <div className="grid grid-cols-2 gap-3">
                   {everydayMomentCards.map(({ type, label, item }) => (
                     <button
                       key={type}
                       type="button"
                       onClick={() => handleImagePress(item)}
-                      className={`w-[118px] shrink-0 snap-start overflow-hidden rounded-[15px] border bg-white text-center shadow-[0_4px_14px_rgba(28,54,92,0.08)] transition-transform duration-150 active:scale-[0.985] dark:bg-[#111827] ${
+                      className={`w-full min-w-0 overflow-hidden rounded-[15px] border bg-white text-center shadow-[0_4px_14px_rgba(28,54,92,0.08)] transition-transform duration-150 active:scale-[0.985] dark:bg-[#111827] ${
                         selectedTemp?.id === item?.id
                           ? "border-[#2F80EA] ring-2 ring-[#2F80EA]/20"
                           : "border-[#E4EAF3] dark:border-[#263146]"

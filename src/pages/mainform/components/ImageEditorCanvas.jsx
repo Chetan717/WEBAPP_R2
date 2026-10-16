@@ -1,3 +1,4 @@
+import { encodeCropCanvas } from "../../../utils/cropCanvasEncoder";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "@heroui/react";
 import { buildPhotoEnhanceFilter } from "../../../utils/photoEnhance";
@@ -717,7 +718,7 @@ export default function ImageEditorCanvas({
     progressTimerRef.current = setInterval(() => {
       p = Math.min(p + (p < 40 ? 10 : p < 70 ? 4 : 1), 85);
       setEncodeProgress(p);
-    }, 55);
+    }, 150);
 
     const rot = rotRef.current,
       fH = flipHRef.current,
@@ -777,8 +778,11 @@ export default function ImageEditorCanvas({
     // a white halo when the cutout is placed on a dark banner. Preserve that
     // edge losslessly as PNG; the initial photo crop can stay compact WebP.
     const exportType = enableEnhance ? "image/png" : "image/webp";
-    out.toBlob(
-      (blob) => {
+    void encodeCropCanvas(
+      out,
+      exportType,
+      exportType === "image/webp" ? 0.92 : undefined,
+    ).then((blob) => {
         clearInterval(progressTimerRef.current);
         if (!blob) {
           // A few Android WebViews occasionally return null from canvas.toBlob.
@@ -809,23 +813,28 @@ export default function ImageEditorCanvas({
           return;
         }
 
+        // Encoding is complete: apply and close on this same task. Holding the
+        // crop screen for another 180ms made Done feel unresponsive on phones.
         setEncodeProgress(100);
-        setTimeout(() => {
-          isDoingRef.current = false;
+        isDoingRef.current = false;
+        try {
+          const shouldClose = onDone?.(blob) !== false;
+          if (shouldClose) setOpen(false);
+        } catch (error) {
+          console.error("[ImageEditorCanvas] Done callback failed:", error);
+          toast.danger("Photo could not be applied. Please try again.");
+        } finally {
           setIsDoing(false);
           setEncodeProgress(0);
-          try {
-            const shouldClose = onDone?.(blob) !== false;
-            if (shouldClose) setOpen(false);
-          } catch (error) {
-            console.error("[ImageEditorCanvas] Done callback failed:", error);
-            toast.danger("Photo could not be applied. Please try again.");
-          }
-        }, 180);
-      },
-      exportType,
-      exportType === "image/webp" ? 0.92 : undefined,
-    );
+        }
+      }).catch((error) => {
+        clearInterval(progressTimerRef.current);
+        console.error("[ImageEditorCanvas] Crop encoding failed:", error);
+        isDoingRef.current = false;
+        setIsDoing(false);
+        setEncodeProgress(0);
+        toast.danger("Photo could not be saved. Please tap Done again.");
+      });
   };
 
   const onCancelClick = () => {

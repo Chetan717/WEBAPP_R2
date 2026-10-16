@@ -145,27 +145,47 @@ function PersistentPages({
   const homeHeaderHiddenRef = useRef(false);
   const [homeHeaderHidden, setHomeHeaderHidden] = useState(false);
 
-  // Prefetch the large Konva editor only when Home is idle on a usable
-  // connection. This moves chunk download off the template-tap critical path
-  // without competing with the initial home/catalog requests on slow phones.
+  // Route code preload only; no component mount, Firestore fetch or state change.
+  // Prefetch sequentially *while idle*, after Home becomes usable. This makes
+  // first tap navigation quicker without making initial Home slower or adding
+  // Firebase reads. Heavy editor remains an independent late idle preload.
   useEffect(() => {
     if (!isHome || !authenticated || !ready) return undefined;
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     if (connection?.saveData || /(^|-)2g$/i.test(connection?.effectiveType || "")) return undefined;
+
+    const loaders = [
+      () => import("./pages/Homepage/Component/AllTemplates"),
+      () => import("./pages/Homepage/Component/HomeSearchPage"),
+      () => import("./pages/Homepage/Component/AllCategoriesPage"),
+      () => import("./pages/SelectCompany/SelectComp"),
+      () => import("./pages/Mymlmprofile/MlmProfile"),
+      () => import("./pages/Profile/Myprofile"),
+      () => import("./pages/Editor/MainEditor"),
+    ];
     let cancelled = false;
+    let timer = null;
     let idleId = null;
-    const timer = setTimeout(() => {
-      if (cancelled) return;
-      const warm = () => { if (!cancelled) void import("./pages/Editor/MainEditor").catch(() => {}); };
+    let index = 0;
+    const warmNext = () => {
+      if (cancelled || index >= loaders.length) return;
+      const load = loaders[index++];
+      void load().catch(() => {});
+      // Spread parse/evaluation across idle windows so a tap can take priority.
+      timer = window.setTimeout(scheduleNext, index === loaders.length - 1 ? 1400 : 1000);
+    };
+    const scheduleNext = () => {
+      if (cancelled || index >= loaders.length) return;
       if (typeof window.requestIdleCallback === "function") {
-        idleId = window.requestIdleCallback(warm, { timeout: 8000 });
+        idleId = window.requestIdleCallback(warmNext, { timeout: 6000 });
       } else {
-        warm();
+        timer = window.setTimeout(warmNext, 400);
       }
-    }, 3500);
+    };
+    timer = window.setTimeout(scheduleNext, 1200);
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      window.clearTimeout(timer);
       if (idleId !== null && typeof window.cancelIdleCallback === "function") {
         window.cancelIdleCallback(idleId);
       }

@@ -1,3 +1,4 @@
+import { encodeCropCanvas } from "../../utils/cropCanvasEncoder";
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { buildPhotoEnhanceFilter } from "../../utils/photoEnhance";
@@ -894,7 +895,7 @@ export function ImageEditorCanvas({
       );
 
       setEncodeProgress(progress);
-    }, 55);
+    }, 150);
 
     const rot = rotRef.current;
     const fH = flipHRef.current;
@@ -961,21 +962,34 @@ export function ImageEditorCanvas({
     // A transparent cutout must stay lossless. Lossy WebP colour compression
     // can recreate a pale fringe even though the alpha channel is valid.
     const exportType = enableEnhance ? "image/png" : "image/webp";
-    outputCanvas.toBlob(
-      (blob) => {
-        clearInterval(progressTimerRef.current);
-
-        setEncodeProgress(100);
-
-        setTimeout(() => {
-          setIsDoing(false);
-          setEncodeProgress(0);
-          onDone(blob);
-        }, 180);
-      },
+    void encodeCropCanvas(
+      outputCanvas,
       exportType,
       exportType === "image/webp" ? 0.92 : undefined,
-    );
+    ).then((blob) => {
+        clearInterval(progressTimerRef.current);
+
+        if (!blob) {
+          setIsDoing(false);
+          setEncodeProgress(0);
+          toast.danger("Photo could not be saved. Please try again.");
+          return;
+        }
+        // Avoid a second unnecessary delay after canvas encoding completes.
+        setEncodeProgress(100);
+        try {
+          onDone(blob);
+        } finally {
+          setIsDoing(false);
+          setEncodeProgress(0);
+        }
+      }).catch((error) => {
+        clearInterval(progressTimerRef.current);
+        console.error("[MLMProfileImageEditor] Crop encoding failed:", error);
+        setIsDoing(false);
+        setEncodeProgress(0);
+        toast.danger("Photo could not be saved. Please try again.");
+      });
   };
 
   const tabs = [

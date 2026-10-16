@@ -755,3 +755,12 @@ button[class*="bg-[#2F80EA]"] {
   background: color-mix(in srgb, var(--app-theme-primary) 10%, transparent) !important;
   color: var(--app-theme-primary) !important;
 }
+
+
+/* Touch navigation: no delayed mobile synthetic click on actual controls.
+ * Do NOT apply touch-action to the page or swipe rails: they need native pan.
+ */
+:where(button, a, [role="button"], input[type="button"], input[type="submit"]) {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}

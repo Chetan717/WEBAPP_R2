@@ -41,7 +41,6 @@ import {
   preloadImage,
   seenImages,
 } from "./templateCacheUtils";
-import { findNewSubtypeAnnouncement } from "../../../utils/newSubtypeAnnouncement";
 import "./stylec.css";
 
 function readSelectedType(contextSelectedType) {
@@ -301,7 +300,7 @@ function SubtypeChoiceCard({ section, parentType, onOpenGrid }) {
       onPointerDown={() => previewGraphic?.url && preloadImage(previewGraphic.url)}
       onClick={() => onOpenGrid(section.subtype, parentType)}
       aria-label={`View all ${subtypeLabel} designs`}
-      className="relative aspect-[1.18] w-full min-w-0 overflow-hidden rounded-[16px] border border-[#E5EAF2] bg-muted/40 text-left shadow-[0_2px_10px_rgba(28,54,92,0.04)] card-press dark:border-border"
+      className="relative aspect-square w-[118px] shrink-0 snap-start overflow-hidden rounded-[16px] border border-[#E5EAF2] bg-muted/40 text-left shadow-[0_2px_10px_rgba(28,54,92,0.04)] card-press dark:border-border"
     >
       <ShowcaseImage
         src={preview}
@@ -345,7 +344,7 @@ function EverydayTypeSubtypeSection({ typeSection, onOpenGrid }) {
   return (
     <section
       ref={sectionRef}
-      style={{ contentVisibility: "auto", containIntrinsicSize: "300px" }}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "170px" }}
     >
       <div className="mb-4 flex items-end justify-between gap-3 border-b border-border/70 pb-3">
         <div className="min-w-0">
@@ -360,7 +359,7 @@ function EverydayTypeSubtypeSection({ typeSection, onOpenGrid }) {
 
       {typeSection.subtypeSections.length > 0 ? (
         renderChoices ? (
-          <div className="grid grid-cols-2 gap-3 px-0.5 pb-2 pt-0.5">
+          <div className="hide-scrollbar scroll-gpu flex min-h-[122px] snap-x gap-3 overflow-x-auto px-0.5 pb-2 pt-0.5">
             {typeSection.subtypeSections.map((section) => (
               <SubtypeChoiceCard
                 key={`${typeSection.type}-${section.subtype}`}
@@ -372,7 +371,7 @@ function EverydayTypeSubtypeSection({ typeSection, onOpenGrid }) {
           </div>
         ) : (
           <div
-            className="h-[260px] rounded-xl bg-muted/20"
+            className="h-[122px] rounded-xl bg-muted/20"
             aria-hidden="true"
           />
         )
@@ -559,7 +558,6 @@ export default function AllTemplates() {
   const [error, setError] = useState("");
   const [retryId, setRetryId] = useState(0);
   const [selectedGraphicKey, setSelectedGraphicKey] = useState("");
-  const [newSubtypeNotice, setNewSubtypeNotice] = useState(null);
   const requestSequenceRef = useRef(0);
   const lastKeyRef = useRef("");
 
@@ -728,18 +726,6 @@ export default function AllTemplates() {
       ),
     [typeSections],
   );
-
-  // Snapshot unique subtype names only. Adding graphics to an existing subtype
-  // must never open this notice. The first visit seeds a baseline silently.
-  const announcedScopeRef = useRef("");
-  useEffect(() => {
-    if (loading || error || !companyId || typeSections.length === 0) return;
-    const scope = `${companyId}::${typeRequestKey}`;
-    if (announcedScopeRef.current === scope) return;
-    announcedScopeRef.current = scope;
-    const candidate = findNewSubtypeAnnouncement(companyId, typeSections);
-    if (candidate) setNewSubtypeNotice(candidate);
-  }, [loading, error, companyId, typeRequestKey, typeSections]);
 
   const goBack = useCallback(() => {
     navigate(getAllTemplatesBackTarget(allTemplatesSearch), { replace: true });
@@ -992,21 +978,6 @@ export default function AllTemplates() {
           )
         )}
       </main>
-      {newSubtypeNotice && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/65 px-5 py-8 backdrop-blur-[3px]" role="presentation" onClick={() => setNewSubtypeNotice(null)}>
-          <div role="dialog" aria-modal="true" aria-label="New designs available" className="relative w-full max-w-sm overflow-hidden rounded-[26px] bg-white p-4 text-center shadow-2xl dark:bg-slate-900" onClick={(event) => event.stopPropagation()}>
-            <button type="button" aria-label="Close announcement" onClick={() => setNewSubtypeNotice(null)} className="absolute right-4 top-4 z-10 rounded-full bg-white/90 px-3 py-1 text-xl text-slate-600 shadow">×</button>
-            <div className="relative mb-4 aspect-square overflow-hidden rounded-[20px] bg-slate-100">
-              {newSubtypeNotice.preview ? <img src={newSubtypeNotice.preview} alt={`${newSubtypeNotice.subtype} design preview`} className="h-full w-full object-contain" loading="eager" /> : <div className="flex h-full items-center justify-center text-5xl">✨</div>}
-              <span className="absolute left-3 top-3 rounded-full bg-[#2478EA] px-3 py-1 text-xs font-bold text-white shadow">NEW SUBTYPE</span>
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">New designs are here!</h2>
-            <p className="mt-1 text-sm text-slate-500">{displayLabel(newSubtypeNotice.subtype)} · {displayLabel(newSubtypeNotice.type)}</p>
-            <button type="button" className="mt-5 w-full rounded-2xl bg-[#2478EA] px-5 py-3.5 text-base font-bold text-white shadow-lg shadow-blue-500/25 active:scale-[0.98]" onClick={() => { const chosen = newSubtypeNotice; setNewSubtypeNotice(null); if (chosen.graphic) selectGraphic(chosen.graphic); }}>Create Now →</button>
-            <button type="button" onClick={() => setNewSubtypeNotice(null)} className="mt-3 w-full py-2 text-sm font-medium text-slate-500">Maybe later</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
