@@ -628,5 +628,33 @@
         "size": "square"
       }
     ]
+  },
+  {
+    "ID": "mEaJ8R6Qc50POVBLS7lM",
+    "name": "AYURICH",
+    "logos": [
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1792137528975_pc0olk.webp",
+        "size": "square"
+      },
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1792137528975_pc0olk.webp",
+        "size": "square"
+      }
+    ]
+  },
+  {
+    "ID": "3H9oMlcZfarMYx2JgyAq",
+    "name": "WINWEB",
+    "logos": [
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1791798299082_0emr6w.webp",
+        "size": "square"
+      },
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1791798299082_0emr6w.webp",
+        "size": "square"
+      }
+    ]
   }
 ]
