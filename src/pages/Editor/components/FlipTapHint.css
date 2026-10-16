@@ -26,19 +26,19 @@
   background: rgba(255, 255, 255, 0.94);
   border: 0.5px solid rgba(47, 128, 234, 0.35);
   box-shadow: 0 1px 6px rgba(30, 85, 171, 0.24);
-  animation: mlmlive-hand-tap 1.7s ease-in-out infinite;
+  animation: mlmlive-hand-tap 1s ease-in-out infinite;
   animation-delay: var(--flip-hint-delay, 0ms);
 }
 .mlmlive-flip-tap-hint__ring {
   position: absolute;
-  top: -2px;
+  top: -20px;
   left: 22px;
   width: 26px;
   height: 26px;
   border: 1px solid rgba(47, 128, 234, 0.78);
   border-radius: 50%;
   opacity: 0;
-  animation: mlmlive-tap-ripple 2.7s ease-out infinite;
+  animation: mlmlive-tap-ripple 1s ease-out infinite;
   animation-delay: var(--flip-hint-delay, 0ms);
 }
 .mlmlive-flip-tap-hint__label {
