@@ -123,6 +123,9 @@ function getUserMlm() {
 }
 
 const SOCIAL_PLATFORMS = ["Facebook", "Instagram", "Youtube", "X"];
+const SALUTATION_OPTIONS = Object.freeze([
+  "Mr", "Mrs", "Miss", "Ms", "Dr", "Prof", "Er", "",
+]);
 
 const normalizeLogoSelections = (value) =>
   (Array.isArray(value) ? value : []).reduce((acc, item) => {
@@ -732,8 +735,11 @@ export default function MLMProfilePage() {
 
         const fullName = data.fullName || "";
         const dotIdx = fullName.indexOf(".");
-        const salutation = dotIdx !== -1 ? fullName.slice(0, dotIdx) : "Mr";
-        const name = dotIdx !== -1 ? fullName.slice(dotIdx + 1) : fullName;
+        const savedSalutation = dotIdx !== -1 ? fullName.slice(0, dotIdx) : "";
+        const salutation = SALUTATION_OPTIONS.includes(savedSalutation)
+          ? savedSalutation
+          : "";
+        const name = salutation ? fullName.slice(dotIdx + 1) : fullName;
 
         const profileImageURLs = normalizeProfileUrlArray(data.profileImageURLs || []);
         originalProfileImageURLsRef.current = profileImageURLs;
@@ -1410,7 +1416,7 @@ export default function MLMProfilePage() {
       ];
 
       const profileData = {
-        fullName: `${form.salutation}.${form.name.trim()}`,
+        fullName: `${form.salutation ? `${form.salutation}.` : ""}${form.name.trim()}`,
         mobile: userMobile,
         designation: form.designation,
         logoURLs: allLogoURLs,
@@ -1889,11 +1895,9 @@ export default function MLMProfilePage() {
                   onChange={(e) => setField("salutation", e.target.value)}
                   className="border border-[#DDE3ED] rounded-[14px] px-3 py-2.5 text-[13px] bg-[#F1F4F9] text-foreground focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-[#2478EA] transition-all dark:border-border dark:bg-[#1A2236]"
                 >
-                  {["Mr", "Mrs", "Miss", "Ms", "Dr",
-                    "Prof","Er",
-                  ].map((s) => (
+                  {SALUTATION_OPTIONS.map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {s || "None"}
                     </option>
                   ))}
                 </select>

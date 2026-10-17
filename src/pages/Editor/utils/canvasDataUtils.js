@@ -39,6 +39,11 @@ export function processProfileData(mlmForm, mlmProfile) {
 export function getAchieverDisplayName(achiever) {
   if (!achiever) return "";
 
+  // An empty title is the explicit None selection, not the default Mr.
+  if (achiever.title === "") {
+    return String(achiever.name || achiever.achieverName || "").trim();
+  }
+
   const rawTitle = String(achiever.title || "").trim().toLowerCase().replace(/\./g, "");
   const title =
     rawTitle === "mrs"

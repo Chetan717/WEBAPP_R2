@@ -101,8 +101,9 @@ const storage = getStorage(app);
 const RANK_PROMOTION_FORM_IMAGES = Object.freeze(
   Object.fromEntries(RANK_PROMOTION_TYPES.map((type) => [type, Rank])),
 );
-const ACHIEVER_TITLE_OPTIONS = Object.freeze(["Mr.", "Mrs.", "Miss", "Dr.", "Prof.", "Er."]);
+const ACHIEVER_TITLE_OPTIONS = Object.freeze(["Mr.", "Mrs.", "Miss", "Dr.", "Prof.", "Er.", ""]);
 const ACHIEVER_TITLE_BY_KEY = Object.freeze({
+  "": "",
   mr: "Mr.",
   mrs: "Mrs.",
   miss: "Miss",
@@ -130,13 +131,15 @@ function base64ToBlob(dataUrl) {
 
 function parseAchieverName(savedAchiever = {}) {
   const rawTitle = String(savedAchiever.title || "").trim().toLowerCase().replace(/\./g, "");
-  const title = ACHIEVER_TITLE_BY_KEY[rawTitle] || "Mr.";
-  const hasValidTitle = Boolean(ACHIEVER_TITLE_BY_KEY[rawTitle]);
+  const hasValidTitle =
+    typeof savedAchiever.title === "string" &&
+    Object.prototype.hasOwnProperty.call(ACHIEVER_TITLE_BY_KEY, rawTitle);
+  const title = hasValidTitle ? ACHIEVER_TITLE_BY_KEY[rawTitle] : "Mr.";
   let name = savedAchiever.name || "";
 
   if (!hasValidTitle && savedAchiever.achieverName) {
     const raw = savedAchiever.achieverName.trim();
-    const match = raw.match(/^(Mr\.?|Mrs\.?|Miss|Dr\.?)\s*(.*)$/i);
+    const match = raw.match(/^(Mrs\.?|Mr\.?|Miss|Dr\.?)\s*(.*)$/i);
     if (match) {
       const matchedTitleKey = match[1].toLowerCase().replace(/\./g, "");
       return {
@@ -1014,14 +1017,14 @@ export default function SalesExecutiveForm() {
                 <div className="flex flex-row gap-2 w-full">
                   <div className="w-[25%] mt-1.5 flex-shrink-0">
                     <select
-                      value={achiever.title || "Mr."}
+                      value={achiever.title ?? "Mr."}
                       onChange={(e) => {
                         const key = e.target.value;
                         setAchiever((p) => ({
                           ...p,
                           title: key,
                           achieverName:
-                            `${key || "Mr."} ${p.name || ""}`.trim(),
+                            `${key} ${p.name || ""}`.trim(),
                         }));
                       }}
                       className="border border-border bg-[var(--field-background)] text-foreground"
@@ -1043,7 +1046,7 @@ export default function SalesExecutiveForm() {
                     >
                       {ACHIEVER_TITLE_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>
-                          {opt}
+                          {opt || "None"}
                         </option>
                       ))}
                     </select>
@@ -1072,7 +1075,7 @@ export default function SalesExecutiveForm() {
                           ...p,
                           name: sanitized,
                           achieverName:
-                            `${p.title || "Mr."} ${sanitized}`.trim(),
+                            `${p.title ?? "Mr."} ${sanitized}`.trim(),
                         }));
                         clearError("achieverName");
                       }}
