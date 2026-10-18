@@ -4817,7 +4817,7 @@ function GeneralEditPage({
 
           {/* Editor-only DOM hints: not children of Konva Stage, so never exported. */}
           {!previewOnly && !isVideoUnavailable && !!bgImage && (
-            <div className="absolute inset-0 z-[15] top-36 pointer-events-none" aria-hidden="true">
+            <div className="absolute inset-0 z-[15] top-40 pointer-events-none" aria-hidden="true">
               {!dismissedFlipHints.rank && flipHintPositions.rank && (
                 <FlipTapHint target="rank" position={flipHintPositions.rank} delayMs={480} />
               )}
