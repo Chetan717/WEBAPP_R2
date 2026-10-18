@@ -174,44 +174,40 @@ export function Login() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-background shadow-[0_0_40px_rgba(15,23,42,0.08)] dark:shadow-none">
-        <div className="relative h-[455px] overflow-hidden bg-[#081529]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_0%,rgba(47,128,234,0.24),transparent_48%)]" />
-
-          {LOGIN_WALL_CARDS.map((card, index) => (
-            <div
-              key={index}
-              className="absolute overflow-hidden rounded-[9px] shadow-[0_8px_20px_rgba(0,0,0,0.24)]"
-              style={{
-                left: card.x,
-                top: card.y,
-                width: card.w,
-                height: card.h,
-                background: card.bg,
-                opacity: 0.96,
-              }}
-            >
-              <span className="absolute bottom-8 left-3 h-1 w-12 rounded-full bg-[#f7c548]/80" />
-              <span className="absolute bottom-5 left-3 h-1 w-9 rounded-full bg-white/65" />
-              <span className="absolute bottom-3 right-3 h-7 w-7 rounded-full bg-white/15" />
-            </div>
-          ))}
+        <div className="relative isolate aspect-[680/700] w-full overflow-hidden bg-[#081529]">
+          <img
+            src={`https://cdn.mlmposter.com/video/1009-original-animation-optimized%20(1).gif`}
+            alt="MLM LIVE"
+            className="absolute inset-0 block h-full w-full object-cover object-center"
+          />
 
           <div className="absolute left-4 top-4 flex h-14 w-14 items-center justify-center rounded-[14px] border border-white/70 bg-white p-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
-            <img src={logo} alt="MLM LIVE" className="h-full w-full object-contain" />
+            <img
+              src={logo}
+              alt="MLM LIVE"
+              className="h-full w-full object-contain"
+            />
           </div>
 
           <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full border border-white/45 bg-white/15 px-3 py-2 text-[12px] font-semibold text-white backdrop-blur-md">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <circle cx="12" cy="12" r="9" />
               <path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" />
             </svg>
             English
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent via-[var(--background)]/75 to-[var(--background)]" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent via-[var(--background)]/75 to-[var(--background)]" />
         </div>
 
-        <div className="relative z-10 -mt-16 bg-background px-6 pb-8">
+        <div className="relative z-10 -mt-8 bg-background px-6 pb-8">
           <div className="mx-auto w-full">
             <h1 className="text-[23px] font-bold leading-tight text-foreground">
               Log in to your account
@@ -220,10 +216,17 @@ export function Login() {
               10,000+ ready designs with your photo and details already on them
             </p>
 
-            <form className="mt-7 flex w-full flex-col gap-3" onSubmit={onSubmit}>
-              <label className="sr-only" htmlFor="login-mobile">Mobile number</label>
+            <form
+              className="mt-7 flex w-full flex-col gap-3"
+              onSubmit={onSubmit}
+            >
+              <label className="sr-only" htmlFor="login-mobile">
+                Mobile number
+              </label>
               <div className="app-field flex h-[56px] items-center rounded-[16px] border px-3 shadow-sm focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15">
-                <span className="flex h-9 items-center border-r border-border pr-3 text-[15px] font-medium text-foreground">+91</span>
+                <span className="flex h-9 items-center border-r border-border pr-3 text-[15px] font-medium text-foreground">
+                  +91
+                </span>
                 <input
                   id="login-mobile"
                   name="mobile"
