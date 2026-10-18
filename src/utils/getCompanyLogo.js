@@ -4,7 +4,12 @@ export function getLocalLogo(companyId) {
   if (!companyId) return null;
   const company = logoData?.find((item) => item.ID === `${companyId}`);
   if (!company) return null;
-  return company?.logos || null;
+  if (!Array.isArray(company.logos)) return null;
+  return company.logos.map((logo) =>
+    typeof logo === "string"
+      ? getLogoLink(logo)
+      : { ...logo, link: getLogoLink(logo) },
+  );
 }
 
 const asLogoList = (value) => {
@@ -13,9 +18,11 @@ const asLogoList = (value) => {
 };
 
 const getLogoLink = (value) => {
-  if (typeof value === "string") return value.trim();
-  if (value && typeof value.link === "string") return value.link.trim();
-  return "";
+  const link = typeof value === "string"
+    ? value.trim()
+    : typeof value?.link === "string" ? value.link.trim() : "";
+  // Public files must resolve from the app root, including /editor/ and form routes.
+  return link.replace(/^(?:\.\/)?companylogo\//, "/companylogo/");
 };
 
 export function getCompanyLogoUrl(company, preferredSize = "square") {

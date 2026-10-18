@@ -1799,9 +1799,10 @@ function GeneralEditPage({
   }
 
   const [Imagefooter] = useTemplateCanvasImage(selectedFooterFrame?.value || "");
-  const [Imagel2] = useImage(logoEntries?.[0]?.link || "", "anonymous");
+  // Logos need the same fresh CORS fetch / same-origin fallback as other CDN canvas assets.
+  const [Imagel2] = useTemplateCanvasImage(logoEntries?.[0]?.link || "");
 
-  const [Imagel3] = useImage(logoEntries?.[1]?.link || "", "anonymous");
+  const [Imagel3] = useTemplateCanvasImage(logoEntries?.[1]?.link || "");
 
   const [Imagef1] = useImage(achievementForm?.features?.[0] || "", "anonymous");
   const [Imagef2] = useImage(achievementForm?.features?.[1] || "", "anonymous");
