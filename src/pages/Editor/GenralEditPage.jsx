@@ -763,8 +763,14 @@ function GeneralEditPage({
   }, [previewFormData]);
 
   // Editor-only guidance: hints are DOM overlays, never Konva/export content.
-  const [flipHintPositions, setFlipHintPositions] = useState({ profile: null, rank: null });
-  const [dismissedFlipHints, setDismissedFlipHints] = useState({ profile: false, rank: false });
+  const [flipHintPositions, setFlipHintPositions] = useState({
+    profile: null,
+    rank: null,
+  });
+  const [dismissedFlipHints, setDismissedFlipHints] = useState({
+    profile: false,
+    rank: false,
+  });
 
   const [isImageSelected, setIsImageSelected] = useState(false);
   const [selectedImageType, setSelectedImageType] = useState(null);
@@ -986,6 +992,12 @@ function GeneralEditPage({
     selll?.type === "Meeting" || selll?.type === "General_Meeting";
   const isRank_B = Template_Type === "Rank_Promotion_B";
   const isRank = isRankPromotionType(Template_Type) || isTraining;
+  // The Add Badge For Image size belongs to the selected graphics row.
+  // Missing/unknown values keep the existing Small height; other types stay unchanged.
+  const rankBadgeSize =
+    Template_Type === "Rank_Promotion" ? selected?.badgeSize : "small";
+  const rankBadgeHeight =
+    rankBadgeSize === "big" ? 100 : rankBadgeSize === "medium" ? 42 : 32;
   const isMlmToday = selll?.type === "Today_Trending";
   const isAwpl = mlmProfile?.companyName === "AWPL";
 
@@ -1148,7 +1160,9 @@ function GeneralEditPage({
                     : isRank_B
                       ? 215
                       : isRank
-                        ? 217
+                        ? rankBadgeSize === "big"
+                          ? 170
+                          : 217
                         : 218,
       width: isCapping
         ? 150
@@ -1169,31 +1183,34 @@ function GeneralEditPage({
                       : isRank
                         ? 150
                         : 130,
-      height: isCapping
-        ? 32
-        : isIncome
-          ? 40
-          : isAnyversary
-            ? 100
-            : isAchievement
-              ? 60
-              : isClosing
-                ? 32
-                : isWelcome
-                  ? 32
-                  : isBonanza
-                    ? 95
-                    : isRank_B
-                      ? 60
-                      : isRank
-                        ? 32
-                        : 30,
+      height:
+        Template_Type === "Rank_Promotion"
+          ? rankBadgeHeight
+          : isCapping
+            ? 32
+            : isIncome
+              ? 40
+              : isAnyversary
+                ? 100
+                : isAchievement
+                  ? 60
+                  : isClosing
+                    ? 32
+                    : isWelcome
+                      ? 32
+                      : isBonanza
+                        ? 95
+                        : isRank_B
+                          ? 60
+                          : isRank
+                            ? Number(rankBadgeHeight)
+                            : 30,
       scaleX: 1,
       offsetX: 0,
       scaleY: 1,
       offsetY: 0,
     }),
-    [isRight, Template_Type],
+    [isRight, Template_Type, rankBadgeHeight],
   );
 
   const [stickerAttrs, setStickerAttrs] = useState(() => stickerInitialAttrs);
@@ -1211,8 +1228,11 @@ function GeneralEditPage({
       offsetY: 0,
     }));
     setRankAttrs(rankInitialAttrs);
+  }, [isRight, Template_Type, rankInitialAttrs]);
+
+  useEffect(() => {
     setStickerAttrs(stickerInitialAttrs);
-  }, [isRight, Template_Type, rankInitialAttrs, stickerInitialAttrs]);
+  }, [stickerInitialAttrs]);
 
   function getSelType() {
     try {
@@ -1605,7 +1625,9 @@ function GeneralEditPage({
   const incomeDay = incomeFormData?.noOfDay || "";
   const incomeType = incomeFormData?.typeOfIncome || "";
 
-  const [bgImage, bgStatus, retryBackground] = useTemplateCanvasImage(selected?.url || "");
+  const [bgImage, bgStatus, retryBackground] = useTemplateCanvasImage(
+    selected?.url || "",
+  );
   if (bgStatus === "loaded" || bgImage) bgFirstLoadDoneRef.current = true;
   const selectedVideoUrl =
     selected?.backgroundVideoUrl || selected?.videoUrl || null;
@@ -1798,7 +1820,9 @@ function GeneralEditPage({
     return <>{nodes}</>;
   }
 
-  const [Imagefooter] = useTemplateCanvasImage(selectedFooterFrame?.value || "");
+  const [Imagefooter] = useTemplateCanvasImage(
+    selectedFooterFrame?.value || "",
+  );
   // Logos need the same fresh CORS fetch / same-origin fallback as other CDN canvas assets.
   const [Imagel2] = useTemplateCanvasImage(logoEntries?.[0]?.link || "");
 
@@ -1817,21 +1841,51 @@ function GeneralEditPage({
     "anonymous",
   );
   const [ImagetopFrame] = useTemplateCanvasImage(selectedTopFrame?.value || "");
-  const [Imagetop1] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[0] || ""));
-  const [Imagetop2] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[1] || ""));
-  const [Imagetop3] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[2] || ""));
-  const [Imagetop4] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[3] || ""));
-  const [Imagetop5] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[4] || ""));
-  const [Imagetop6] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[5] || ""));
-  const [Imagetop7] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[6] || ""));
-  const [Imagetop8] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[7] || ""));
-  const [Imagetop9] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[8] || ""));
-  const [Imagetop10] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[9] || ""));
-  const [Imagetop11] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[10] || ""));
-  const [Imagetop12] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[11] || ""));
-  const [Imagetop13] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[12] || ""));
-  const [Imagetop14] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[13] || ""));
-  const [Imagetop15] = useResilientCanvasImage(getProfileReadCandidates(topuplineURLs?.[14] || ""));
+  const [Imagetop1] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[0] || ""),
+  );
+  const [Imagetop2] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[1] || ""),
+  );
+  const [Imagetop3] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[2] || ""),
+  );
+  const [Imagetop4] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[3] || ""),
+  );
+  const [Imagetop5] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[4] || ""),
+  );
+  const [Imagetop6] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[5] || ""),
+  );
+  const [Imagetop7] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[6] || ""),
+  );
+  const [Imagetop8] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[7] || ""),
+  );
+  const [Imagetop9] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[8] || ""),
+  );
+  const [Imagetop10] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[9] || ""),
+  );
+  const [Imagetop11] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[10] || ""),
+  );
+  const [Imagetop12] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[11] || ""),
+  );
+  const [Imagetop13] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[12] || ""),
+  );
+  const [Imagetop14] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[13] || ""),
+  );
+  const [Imagetop15] = useResilientCanvasImage(
+    getProfileReadCandidates(topuplineURLs?.[14] || ""),
+  );
 
   const [ImageChief] = useImage(meetingData?.chiefImage || "", "anonymous");
   const profileImageSources = useMemo(
@@ -1840,7 +1894,9 @@ function GeneralEditPage({
         [
           // Meeting host data always belongs to the logged-in MLM profile.
           // For other form types, prefer the selected promoter photo when valid.
-          !isMeeting && mlmForm?.promoter?.name ? mlmForm?.promoter?.image : null,
+          !isMeeting && mlmForm?.promoter?.name
+            ? mlmForm?.promoter?.image
+            : null,
           middaleImage,
           ...(Array.isArray(mlmProfile?.profileImageURLs)
             ? mlmProfile.profileImageURLs
@@ -1897,11 +1953,15 @@ function GeneralEditPage({
   useLayoutEffect(() => {
     if (previewOnly || isVideoUnavailable || !bgImage) {
       setFlipHintPositions((previous) =>
-        previous.profile || previous.rank ? { profile: null, rank: null } : previous,
+        previous.profile || previous.rank
+          ? { profile: null, rank: null }
+          : previous,
       );
       return;
     }
-    const profile = ImageProfile ? getFlipHintPosition(profileImageRef.current, STAGE_WIDTH, STAGE_HEIGHT) : null;
+    const profile = ImageProfile
+      ? getFlipHintPosition(profileImageRef.current, STAGE_WIDTH, STAGE_HEIGHT)
+      : null;
     const rank = (isMeeting ? ImageChief : ImageRank)
       ? getFlipHintPosition(rankImageRef.current, STAGE_WIDTH, STAGE_HEIGHT)
       : null;
@@ -1911,10 +1971,22 @@ function GeneralEditPage({
         : { profile, rank },
     );
   }, [
-    previewOnly, isVideoUnavailable, bgImage, selected?.url, isMeeting,
-    isRight, isSubGeneralType, isSubGeneralType2, isAchievement,
-    ImageProfile, ImageRank, ImageChief, footerImgFlip, profileAttrs,
-    rankAttrs, stageScale,
+    previewOnly,
+    isVideoUnavailable,
+    bgImage,
+    selected?.url,
+    isMeeting,
+    isRight,
+    isSubGeneralType,
+    isSubGeneralType2,
+    isAchievement,
+    ImageProfile,
+    ImageRank,
+    ImageChief,
+    footerImgFlip,
+    profileAttrs,
+    rankAttrs,
+    stageScale,
   ]);
 
   const formname = getAchieverDisplayName(mlmForm?.achiever);
@@ -2951,58 +3023,66 @@ function GeneralEditPage({
             touchAction: "none",
           }}
         >
-          {(bgStatus === "loading" || bgStatus === "retrying") && !isVideoUnavailable && (
-            <div
-              className="absolute inset-0 z-10 overflow-hidden pointer-events-none"
-              style={{
-                background:
-                  "linear-gradient(135deg,#2F80EA 0%,#236FDE 48%,#1454C5 100%)",
-              }}
-            >
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
+          {(bgStatus === "loading" || bgStatus === "retrying") &&
+            !isVideoUnavailable && (
+              <div
+                className="absolute inset-0 z-10 overflow-hidden pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(135deg,#2F80EA 0%,#236FDE 48%,#1454C5 100%)",
+                }}
+              >
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                   <div
                     style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: "50%",
-                      border: "3px solid rgba(255,255,255,0.15)",
-                      borderTop: "3px solid #ffffff",
-                      animation: "spin 0.9s linear infinite",
-                    }}
-                  />
-                  <span
-                    style={{
-                      color: "#fff",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      letterSpacing: 0.5,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 10,
                     }}
                   >
-                    Preparing design
-                    <LoadingDots />
-                  </span>
-                  <SlowLoadingHint
-                    delay={3500}
-                    message="Your design is loading. Large templates or slower connections may take a few extra seconds. Please wait a moment."
-                  />
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "50%",
+                        border: "3px solid rgba(255,255,255,0.15)",
+                        borderTop: "3px solid #ffffff",
+                        animation: "spin 0.9s linear infinite",
+                      }}
+                    />
+                    <span
+                      style={{
+                        color: "#fff",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      Preparing design
+                      <LoadingDots />
+                    </span>
+                    <SlowLoadingHint
+                      delay={3500}
+                      message="Your design is loading. Large templates or slower connections may take a few extra seconds. Please wait a moment."
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
           {bgStatus === "failed" && selected?.url && !isVideoUnavailable && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-background/95 px-5 text-center">
-              <p className="text-sm font-semibold text-foreground">Design image could not load.</p>
-              <p className="text-xs text-muted-foreground">Check your connection or CDN image access.</p>
-              <button type="button" onClick={retryBackground}
-                className="rounded-xl bg-[#2F80EA] px-5 py-2.5 text-sm font-semibold text-white">
+              <p className="text-sm font-semibold text-foreground">
+                Design image could not load.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Check your connection or CDN image access.
+              </p>
+              <button
+                type="button"
+                onClick={retryBackground}
+                className="rounded-xl bg-[#2F80EA] px-5 py-2.5 text-sm font-semibold text-white"
+              >
                 Retry image
               </button>
             </div>
@@ -4031,11 +4111,17 @@ function GeneralEditPage({
                           height={fH}
                           onClick={() => {
                             setFooterImgFlip((f) => !f);
-                            setDismissedFlipHints((previous) => ({ ...previous, profile: true }));
+                            setDismissedFlipHints((previous) => ({
+                              ...previous,
+                              profile: true,
+                            }));
                           }}
                           onTap={() => {
                             setFooterImgFlip((f) => !f);
-                            setDismissedFlipHints((previous) => ({ ...previous, profile: true }));
+                            setDismissedFlipHints((previous) => ({
+                              ...previous,
+                              profile: true,
+                            }));
                           }}
                         />
                       );
@@ -4817,12 +4903,26 @@ function GeneralEditPage({
 
           {/* Editor-only DOM hints: not children of Konva Stage, so never exported. */}
           {!previewOnly && !isVideoUnavailable && !!bgImage && (
-            <div className="absolute inset-0 z-[15] top-40 pointer-events-none" aria-hidden="true">
+            <div
+              className="absolute inset-0 z-[15] top-20 pointer-events-none"
+              aria-hidden="true"
+            >
               {!dismissedFlipHints.rank && flipHintPositions.rank && (
-                <FlipTapHint target="rank" position={flipHintPositions.rank} delayMs={480} />
+                <FlipTapHint
+                  target="rank"
+                  position={flipHintPositions.rank}
+                  delayMs={480}
+                  topf={1}
+                />
               )}
+
               {!dismissedFlipHints.profile && flipHintPositions.profile && (
-                <FlipTapHint target="profile" position={flipHintPositions.profile} delayMs={0} />
+                <FlipTapHint
+                  target="profile"
+                  position={flipHintPositions.profile}
+                  delayMs={0}
+                  topf={7}
+                />
               )}
             </div>
           )}

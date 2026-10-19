@@ -2,8 +2,10 @@ import React from "react";
 import "./FlipTapHint.css";
 
 /** Purely visual onboarding cue. pointer-events:none lets Konva receive taps. */
-export default function FlipTapHint({ target, position, delayMs = 0 }) {
+export default function FlipTapHint({ target, position, delayMs = 0, topf }) {
   if (!position) return null;
+  const tpv = Number((position.y / 320) * 100);
+  const topl = `${tpv + Number(topf)}`;
   return (
     <div
       className="mlmlive-flip-tap-hint"
@@ -11,7 +13,7 @@ export default function FlipTapHint({ target, position, delayMs = 0 }) {
       aria-hidden="true"
       style={{
         left: `${(position.x / 320) * 100}%`,
-        top: `${(position.y / 320) * 100}%`,
+        top: `${topl}%`,
         "--flip-hint-delay": `${delayMs}ms`,
       }}
     >
