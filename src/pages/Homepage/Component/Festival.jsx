@@ -8,6 +8,7 @@ import { hasMlmProfileInStorage } from "../../../utils/companyStorage";
 import { rememberEditorBackTarget } from "../../../utils/editorNavigation";
 import { useSelectedCompany } from "../../../Context/SelectedCompanyContext";
 import { storeEditorTemplateSeed } from "../../../utils/editorTemplateSelection";
+import SingleLineScrollLabel from "../../../components/SingleLineScrollLabel";
 
 const HOME_FESTIVAL_DAYS = 6; // today + next 5 days
 
@@ -361,9 +362,10 @@ export default function Festival() {
                           </div>
                         </div>
                         <div className="px-2.5 py-2.5">
-                          <p className="line-clamp-2 min-h-[26px] text-[10px] font-semibold leading-[13px] text-[#20283A] dark:text-[#E4EAF4]">
-                            {card.Subtype || "Festival"}
-                          </p>
+                          <SingleLineScrollLabel
+                            label={card.Subtype || "Festival"}
+                            className="text-[10px] font-semibold leading-[13px] text-[#20283A] dark:text-[#E4EAF4]"
+                          />
                         </div>
                       </button>
                     ))}

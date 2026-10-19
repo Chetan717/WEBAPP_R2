@@ -13,6 +13,7 @@ Konva.hitOnDragEnabled = true;
 import useImage from "use-image";
 import useTemplateCanvasImage from "../../hooks/useTemplateCanvasImage";
 import ListOfTemplates from "./components/ListOfTemplates";
+import CompanyLogoCanvas from "./components/CompanyLogoCanvas";
 import AiRetouchModal from "./AiRetouchModal";
 import CaptionModal from "../../components/CaptionModal";
 import {
@@ -3154,7 +3155,7 @@ function GeneralEditPage({
                   />
                 ) : null}
                 {/* {isMlmToday ? null : ( */}
-                <Image
+                <CompanyLogoCanvas
                   image={Imagel2}
                   x={1}
                   y={2}
@@ -3164,7 +3165,7 @@ function GeneralEditPage({
                 {/* )} */}
                 {/* {isMlmToday ? null : ( */}
                 {isAwpl && isMlmToday ? null : (
-                  <Image
+                  <CompanyLogoCanvas
                     image={Imagel3}
                     x={logo2size === "square" ? 292 : 268}
                     y={2}

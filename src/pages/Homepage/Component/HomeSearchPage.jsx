@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, Clock3, Search, X } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
+import VoiceSearchButton from "../../../components/VoiceSearchButton";
 import { useGeneralData } from "../../../Context/GeneralContext";
 import ListOfGenaraltemp from "./ListOfGenaraltemp";
 import {
@@ -33,8 +34,10 @@ function storeRecentSearches(items) {
 
 export default function HomeSearchPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const inputRef = useRef(null);
   const { cachedTemplates } = useGeneralData();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => String(location.state?.voiceQuery || "").slice(0, 50));
   const [recentSearches, setRecentSearches] = useState(() => readRecentSearches());
   const [generalIndexRevision, setGeneralIndexRevision] = useState(0);
 
@@ -62,6 +65,15 @@ export default function HomeSearchPage() {
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    const state = location.state || {};
+    if (!state.voiceQuery && !state.voiceKeyboard) return;
+    if (state.voiceQuery) commitSearch(String(state.voiceQuery).slice(0, 50));
+    if (state.voiceKeyboard) inputRef.current?.focus();
+    const { voiceQuery, voiceKeyboard, ...rest } = state;
+    navigate(location.pathname, { replace: true, state: rest });
+  }, [location.state, location.pathname, navigate, commitSearch]);
 
   const filteredTemplates = useMemo(
     () => buildDeepSearchResults(cachedTemplates, query, getAllGeneralTemplates),
@@ -95,24 +107,33 @@ export default function HomeSearchPage() {
           >
             <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7E8AA1]" />
             <input
+              ref={inputRef}
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onBlur={() => query.trim() && commitSearch(query)}
               placeholder="Search templates"
               maxLength={50}
-              className="h-12 w-full rounded-2xl border-0 bg-white pl-11 pr-11 text-[14px] font-medium text-[#1A2232] outline-none placeholder:text-[#8D98AD] dark:bg-[#172033] dark:text-white"
+              aria-label="Search templates"
+              className="h-12 w-full rounded-2xl border-0 bg-white pl-11 pr-[84px] text-[14px] font-medium text-[#1A2232] outline-none placeholder:text-[#8D98AD] dark:bg-[#172033] dark:text-white"
             />
             {query ? (
               <button
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label="Clear search"
-                className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-[#8290A8]"
+                className="absolute right-12 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-[#8290A8]"
               >
                 <X className="h-4 w-4" />
               </button>
             ) : null}
+            <VoiceSearchButton
+              className="absolute right-2 top-1/2 h-9 w-9 -translate-y-1/2"
+              cancelSignal={query}
+              onStart={() => inputRef.current?.blur()}
+              onTranscript={commitSearch}
+              onFallback={() => inputRef.current?.focus()}
+            />
           </form>
         </div>
       </header>

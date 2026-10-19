@@ -1,5 +1,6 @@
 import Carosel from "./Homepage/Component/Carosel";
 import Festival from "./Homepage/Component/Festival";
+import VoiceSearchButton from "../components/VoiceSearchButton";
 import ListOfGenaraltemp from "./Homepage/Component/ListOfGenaraltemp";
 import React, {
   useEffect,
@@ -153,29 +154,34 @@ const ALL_CATEGORIES = HOME_UI_TEMPLATE_TYPES.map((type) => ({
 const TOP_CATEGORIES = ALL_CATEGORIES;
 
 function SearchBar({ onClick, compact = false }) {
+  const navigate = useNavigate();
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       className={`relative flex w-full items-center border border-white/60 bg-white text-left shadow-[0_5px_16px_rgba(15,58,126,0.10)] transition-all duration-200 dark:border-[#33415A] dark:bg-[#172033] ${
         compact ? "h-[42px] rounded-[14px]" : "h-[42px] rounded-[16px]"
       }`}
-      aria-label="Search templates"
     >
-      <Search
-        className={`pointer-events-none absolute text-[#8290A8] dark:text-[#A6B1C5] ${
-          compact ? "left-3.5 h-[17px] w-[17px]" : "left-4 h-[19px] w-[19px]"
-        }`}
-        strokeWidth={2}
+      <button type="button" onClick={onClick} aria-label="Search templates" className="relative flex h-full min-w-0 flex-1 items-center rounded-[inherit] text-left">
+        <Search
+          className={`pointer-events-none absolute text-[#8290A8] dark:text-[#A6B1C5] ${
+            compact ? "left-3.5 h-[17px] w-[17px]" : "left-4 h-[19px] w-[19px]"
+          }`}
+          strokeWidth={2}
+        />
+        <span
+          className={`font-medium text-[#8F9BB0] ${
+            compact ? "pl-10 text-[13px]" : "pl-11 text-[14px]"
+          }`}
+        >
+          Search templates
+        </span>
+      </button>
+      <VoiceSearchButton
+        className="mr-1.5 h-9 w-9"
+        onTranscript={(voiceQuery) => navigate("/search", { state: { voiceQuery } })}
+        onFallback={() => navigate("/search", { state: { voiceKeyboard: true } })}
       />
-      <span
-        className={`font-medium text-[#8F9BB0] ${
-          compact ? "pl-10 text-[13px]" : "pl-11 text-[14px]"
-        }`}
-      >
-        Search templates
-      </span>
-    </button>
+    </div>
   );
 }
 

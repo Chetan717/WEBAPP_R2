@@ -23,7 +23,9 @@ import {
   Star,
   UserRoundX,
   LogOut,
+  Share2,
 } from "lucide-react";
+import { MLMLIVE_PLAY_STORE_URL, shareMlmliveApp } from "../../utils/shareApp";
 import { COLLECTIONS } from "../../collections";
 import { getUser, setUser } from "../../utils/authStorage";
 import { useAuth } from "../../Auth/AuthContext";
@@ -130,6 +132,17 @@ function MainProfileView({
   const location = useLocation();
   const { theme, toggleTheme } = useGeneralData();
   const { t } = useAppLanguage();
+  const [showShareLink, setShowShareLink] = useState(false);
+
+  const handleShareApp = async () => {
+    try {
+      const result = await shareMlmliveApp();
+      setShowShareLink(result === "manual");
+      if (result === "copied") toast.success(t("App link copied. Paste it into any app to share."));
+    } catch {
+      setShowShareLink(true);
+    }
+  };
 
   const isCompanyProfile = hasCompanyProfile(profileData);
   const profileEditLabel = isCompanyProfile ? "Edit Profile" : "Edit Name";
@@ -303,7 +316,28 @@ function MainProfileView({
               }
             />
           </div>
-
+          <SectionTitle>{t("Share")}</SectionTitle>
+          <div className="overflow-hidden rounded-[22px] bg-white dark:bg-[#171e2d]">
+            <MainRow
+              icon={Share2}
+              label={t("Share MLMLIVE App")}
+              onClick={handleShareApp}
+            />
+            {showShareLink && (
+              <div className="border-t border-[#e7eaf0] px-5 py-4 dark:border-white/10">
+                <p className="mb-2 text-[12px] text-[#667085] dark:text-[#b6c0d1]">
+                  {t("Copy this link and share it in any app.")}
+                </p>
+                <input
+                  aria-label="MLMLIVE Play Store link"
+                  readOnly
+                  value={MLMLIVE_PLAY_STORE_URL}
+                  onFocus={(event) => event.target.select()}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground"
+                />
+              </div>
+            )}
+          </div>
           <SectionTitle>{t("Settings & support")}</SectionTitle>
 
           <div className="overflow-hidden rounded-[22px] bg-white dark:bg-[#171e2d]">
@@ -356,13 +390,17 @@ function MainProfileView({
             <MainRow
               icon={CircleHelp}
               label={t("Privacy policy")}
-              onClick={() => window.open("https://mlmlive.in/Privacy.html", "_blank")}
+              onClick={() =>
+                window.open("https://mlmlive.in/Privacy.html", "_blank")
+              }
             />
             <div className="ml-12 h-px bg-[#e7eaf0] dark:bg-white/10" />
             <MainRow
               icon={MessageSquare}
               label={t("Terms & conditions")}
-              onClick={() => window.open("https://mlmlive.in/Term.html", "_blank")}
+              onClick={() =>
+                window.open("https://mlmlive.in/Term.html", "_blank")
+              }
             />
           </div>
 
