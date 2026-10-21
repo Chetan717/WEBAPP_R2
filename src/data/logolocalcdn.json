@@ -698,5 +698,33 @@
         "size": "square"
       }
     ]
-  }
+  },
+  {
+    "ID": "S6vvPVwOaZogMkDJhxsg",
+    "name": "OK DREAM",
+    "logos": [
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1792578603377_nnj0co.webp",
+        "size": "square"
+      },
+      {
+        "link": "https://cdn.mlmposter.com/companies/logos/1792578603377_nnj0co.webp",
+        "size": "square"
+      }
+    ]
+  },
+   {
+     "ID": "bLfOmkqka6NWyhaeQtNG",
+     "name": "PRIDE AND PROPERTY",
+     "logos": [
+       {
+         "link": "https://cdn.mlmposter.com/companies/logos/1792578802412_hm0k8j.webp",
+         "size": "square"
+       },
+       {
+         "link": "https://cdn.mlmposter.com/companies/logos/1792578802412_hm0k8j.webp",
+         "size": "square"
+       }
+     ]
+   }
 ]
