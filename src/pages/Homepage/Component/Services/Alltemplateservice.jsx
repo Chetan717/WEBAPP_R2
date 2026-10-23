@@ -138,6 +138,8 @@ const normalizeRaw = (data) => ({
   ShowCaseForm: data?.ShowCaseForm,
   serial: data?.serial,
   MainType: data?.MainType,
+  createdAt: data?.createdAt,
+  subtypeAddedAt: data?.subtypeAddedAt || "",
   GraphicsLink: Array.isArray(data?.GraphicsLink) ? data.GraphicsLink : [],
 });
 const normalizeDoc = (doc) => normalizeRaw({ id: doc.id, ...doc.data() });

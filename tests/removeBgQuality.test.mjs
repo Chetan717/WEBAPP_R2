@@ -128,26 +128,27 @@ test("automatic retry is limited to engine startup failures", () => {
   );
 });
 
-test("quality engine prefers BiRefNet and only capability-falls back to MODNet", () => {
+test("quality engine prefers BiRefNet with capability and failure fallback to MODNet", () => {
   const removeBg = read("src/pages/mainform/utils/removeBg.js");
   const birefnet = read("src/pages/mainform/utils/birefnetBg.js");
   assert.deepEqual(REMOVE_BG_QUALITY, {
-    engine: "birefnet-webgpu-with-modnet-capability-fallback",
-    model: "birefnet-lite-512-fp16",
+    engine: "birefnet-first-with-modnet-fallback",
+    primaryEngine: "birefnet-lite-512-fp16",
+    fallbackEngine: "modnet",
     continuousAlpha: true,
     lowQualityFallback: false,
     originalPhotoFallback: false,
-    fallbackOnlyWhenUnsupported: true,
+    fallbackOnlyWhenUnsupported: false,
   });
   assert.match(removeBg, /removeBackgroundWithBirefNet/);
-  assert.match(removeBg, /error\?\.removeBgUnsupported === true/);
+  assert.match(removeBg, /falling back to MODNet for this photo/);
   assert.doesNotMatch(removeBg, /MAX_WAIT_FOR_BACKGROUND_PRELOAD_MS|3500/);
   assert.doesNotMatch(
     removeBg,
     /removeBgWithMediaPipe|removeWithImgly|@imgly\/background-removal/,
   );
   assert.match(birefnet, /VITE_BIREFNET_MODEL_URL/);
-  assert.match(birefnet, /models\/birefnet\/model_fp16\.onnx/);
+  assert.match(birefnet, /models\.mlmposter\.com\/birefnet\/model_fp16\.onnx/);
   assert.doesNotMatch(birefnet, /cleanPortraitMatte/);
 
   for (const path of [

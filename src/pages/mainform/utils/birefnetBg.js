@@ -11,7 +11,7 @@ const MODEL_SIZE = 512;
 const MODEL_CACHE_NAME = "mlmlive-ai-models-v3";
 const MODEL_CACHE_VERSION = "birefnet-lite-512-fp16-2026-10-09-v1";
 const DEFAULT_MODEL_URL =
-  "https://models.mlmposter.com/models/birefnet/model_fp16.onnx";
+  "https://models.mlmposter.com/birefnet/model_fp16.onnx";
 const MAX_OUTPUT_SIDE = 3072;
 const MAX_OUTPUT_PIXELS = 6_500_000;
 
@@ -57,6 +57,11 @@ export function getBirefNetModelUrl() {
   const configured = String(import.meta.env.VITE_BIREFNET_MODEL_URL || "").trim();
   const base = configured || DEFAULT_MODEL_URL;
   const url = new URL(base, window.location.href);
+  // Repair the known old deployment value as well as the checked-in default.
+  // Vercel environment variables can override .env.production at build time.
+  if (url.hostname === "models.mlmposter.com" && url.pathname === "/models/birefnet/model_fp16.onnx") {
+    url.pathname = "/birefnet/model_fp16.onnx";
+  }
   // The revision only changes after an explicit retry. Normal loads keep a
   // stable URL so both HTTP cache and Cache Storage can reuse the 94 MB model.
   url.searchParams.set("v", MODEL_CACHE_VERSION);
@@ -97,6 +102,11 @@ export async function getBirefNetCapability() {
     try {
       const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
       if (!adapter) return { supported: false, reason: "webgpu-adapter-unavailable" };
+      // This model has FP16 weights. A WebGPU adapter without shader-f16
+      // cannot execute it safely; avoid a wasted ~98 MB download there.
+      if (!adapter.features?.has?.("shader-f16")) {
+        return { supported: false, reason: "webgpu-fp16-unavailable" };
+      }
       const storageBuffers = Number(adapter.limits?.maxStorageBuffersPerShaderStage || 0);
       if (storageBuffers > 0 && storageBuffers < 7) {
         return { supported: false, reason: "webgpu-storage-buffer-limit" };
@@ -461,14 +471,15 @@ export async function removeBackgroundWithBirefNet(file, onProgress, signal) {
   throwIfAborted(signal);
 
   const decoded = await decodeImage(file);
+  let input;
+  let outputs;
   try {
     onProgress?.("Photo high-quality AI के लिए prepare हो रही है…", 48);
     const inputData = createPreprocessedInput(decoded.source);
     throwIfAborted(signal);
-    const input = new ort.Tensor("float32", inputData, [1, 3, MODEL_SIZE, MODEL_SIZE]);
+    input = new ort.Tensor("float32", inputData, [1, 3, MODEL_SIZE, MODEL_SIZE]);
     onProgress?.("BiRefNet background identify कर रहा है…", 58);
 
-    let outputs;
     try {
       outputs = await session.run({ input_image: input });
     } catch (error) {
@@ -482,11 +493,12 @@ export async function removeBackgroundWithBirefNet(file, onProgress, signal) {
     }
     onProgress?.("Soft matte refine हो रहा है…", 78);
     const matte = sigmoidLogits(output);
-    output.dispose?.();
     const result = await compositeTransparentPng(decoded, matte, onProgress, signal);
     onProgress?.("Clean transparent photo तैयार है", 100);
     return result;
   } finally {
+    input?.dispose?.();
+    for (const output of new Set(Object.values(outputs || {}))) output?.dispose?.();
     decoded.close?.();
   }
 }
