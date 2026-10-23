@@ -7,6 +7,7 @@ const port = Number(process.env.PORT) || 5001;
 
 export default defineConfig({
   base: "/",
+  worker: { format: "es" },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

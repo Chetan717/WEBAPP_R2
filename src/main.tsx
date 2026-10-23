@@ -13,6 +13,7 @@ import { SelectedCompanyProvider } from "./Context/SelectedCompanyContext.jsx";
 import DownloadConfetti from "./components/DownloadConfetti.jsx";
 import { installModalKeyboardGuard } from "./utils/modalKeyboard.js";
 import { installGlobalReferralCapture } from "./utils/referralCode.js";
+import { scheduleBgModelWarmup } from "./utils/bgModelWarmup.js";
 // import ScrollToTop from "./Pages/ScrollToTop.js";
 
 installGlobalReferralCapture();
@@ -107,6 +108,11 @@ function ModalKeyboardController() {
   return null;
 }
 
+function BackgroundModelWarmup() {
+  useEffect(() => scheduleBgModelWarmup(), []);
+  return null;
+}
+
 migrateStoredProfileAssetsToR2();
 
 createRoot(document.getElementById("root")!).render(
@@ -118,6 +124,7 @@ createRoot(document.getElementById("root")!).render(
           <GlobalToastController />
           <GlobalKeyboardController />
           <ModalKeyboardController />
+          <BackgroundModelWarmup />
           <DownloadConfetti />
 
           <Toast.Provider

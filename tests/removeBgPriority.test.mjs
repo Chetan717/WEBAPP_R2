@@ -46,7 +46,7 @@ async function runtime(options = {}) {
   globalThis[key] = fixture;
   const primary = dataModule(`const f=globalThis.${key}; export const getBirefNetCapability=f.capability; export const preloadBirefNet=f.prepare; export const removeBackgroundWithBirefNet=f.primary; export const resetBirefNetEngine=f.resetPrimary;`);
   const fallback = dataModule(`const f=globalThis.${key}; export const preloadModNet=f.preloadFallback; export const removeBackgroundWithModNet=f.fallback; export const resetModNetEngine=f.resetFallback;`);
-  const source = originalSource.replace('import("./birefnetBg.js")', `import(${JSON.stringify(primary)})`).replace('import("./modnetBg.js")', `import(${JSON.stringify(fallback)})`);
+  const source = originalSource.replace('import("./birefnetWorkerClient.js")', `import(${JSON.stringify(primary)})`).replace('import("./modnetBg.js")', `import(${JSON.stringify(fallback)})`);
   const descriptors = Object.fromEntries(["window", "document", "navigator", "createImageBitmap"].map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   Object.defineProperties(globalThis, {
     window: { configurable: true, value: {} },
@@ -148,7 +148,7 @@ test("Cancel during a pending primary preload rejects immediately without fallba
 
 test("a failed silent BiRefNet preload cannot gate or disable the fallback", async () => {
   await using({ prepare: () => Promise.reject(new Error("Download failed")) }, async ({ api, calls }) => {
-    await assert.rejects(api.preloadBgModel(), /Download failed/);
+    assert.equal(await api.preloadBgModel(), "modnet");
     await api.removeBg(photo());
     assert.ok(calls.includes("modnet"));
   });

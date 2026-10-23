@@ -38,7 +38,7 @@ function emitProgress(stage, percentage) {
 
 async function loadBirefNetEngine() {
   if (!birefNetPromise) {
-    birefNetPromise = import("./birefnetBg.js").catch((error) => {
+    birefNetPromise = import("./birefnetWorkerClient.js").catch((error) => {
       birefNetPromise = null;
       throw error;
     });
@@ -90,7 +90,7 @@ function reportNativeFailure(error, engine) {
   }
 }
 
-/** Warm only the selected primary model while the user adjusts the first crop. */
+/** App startup and every crop control reuse this one model/session warmup. */
 export async function preloadBgModel(onProgress) {
   if (typeof window === "undefined") return "unavailable";
   // Forward to the active action even when a silent preload began earlier.
@@ -103,8 +103,17 @@ export async function preloadBgModel(onProgress) {
     preloadPromise = (async () => {
       const selected = await selectBestEngine();
       if (selected === "birefnet") {
-        const { preloadBirefNet } = await loadBirefNetEngine();
-        await preloadBirefNet(report);
+        const { preloadBirefNet, resetBirefNetEngine } = await loadBirefNetEngine();
+        try {
+          await preloadBirefNet(report);
+        } catch (error) {
+          resetBirefNetEngine();
+          if (error?.name === "AbortError") throw error;
+          if (error?.removeBgUnsupported) selectedEnginePromise = Promise.resolve("modnet");
+          const { preloadModNet } = await loadModNetEngine();
+          await preloadModNet(report);
+          return "modnet";
+        }
       } else {
         const { preloadModNet } = await loadModNetEngine();
         await preloadModNet(report);
@@ -369,6 +378,8 @@ async function removeWithPreferredEngine(file, signal) {
     } catch (error) {
       if (error?.name === "AbortError" || signal?.aborted) throw abortError();
       console.warn("[removeBg] BiRefNet failed; falling back to MODNet for this photo.", error);
+      const { resetBirefNetEngine } = await loadBirefNetEngine();
+      resetBirefNetEngine();
       if (error?.removeBgUnsupported === true) selectedEnginePromise = Promise.resolve("modnet");
       preloadPromise = null;
       emitProgress("BiRefNet पूरा नहीं हुआ. Portrait fallback तैयार हो रहा है…", 6);
@@ -419,7 +430,7 @@ export async function removeBg(file, onProgress, signal) {
   }, signal);
 }
 
-/** Force a fresh model download only after the user explicitly retries repair. */
+/** Rebuild sessions after an explicit repair; keep the persisted BiRefNet model. */
 export function refreshRemoveBgKeys() {
   preloadPromise = null;
   selectedEnginePromise = null;
