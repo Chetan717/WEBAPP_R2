@@ -33,6 +33,7 @@ async function using({ entries = [], fetchResponse = binary, configuredUrl } = {
   // Small deterministic ONNX-shaped bytes exercise cache/transport behavior;
   // real shipped binaries are checked separately by inference/browser smoke.
   const source = readFileSync(new URL("../src/pages/mainform/utils/birefnetBg.js", import.meta.url), "utf8")
+    .replace(/from "(\.[^"]+)"/g, (_, spec) => `from "${new URL(spec, new URL("../src/pages/mainform/utils/", import.meta.url)).href}"`)
     .replaceAll("import.meta.env", JSON.stringify({ VITE_BIREFNET_MODEL_URL: configuredUrl }))
     .replace("const MODEL_BYTES = 98_484_532", "const MODEL_BYTES = 1024")
     .replace("bytes.length < 1_000_000", "bytes.length < 32");

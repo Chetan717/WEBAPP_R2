@@ -46,7 +46,7 @@ async function runtime(options = {}) {
   globalThis[key] = fixture;
   const primary = dataModule(`const f=globalThis.${key}; export const getBirefNetCapability=f.capability; export const preloadBirefNet=f.prepare; export const removeBackgroundWithBirefNet=f.primary; export const resetBirefNetEngine=f.resetPrimary;`);
   const fallback = dataModule(`const f=globalThis.${key}; export const preloadModNet=f.preloadFallback; export const removeBackgroundWithModNet=f.fallback; export const resetModNetEngine=f.resetFallback;`);
-  const source = originalSource.replace('import("./birefnetWorkerClient.js")', `import(${JSON.stringify(primary)})`).replace('import("./modnetBg.js")', `import(${JSON.stringify(fallback)})`);
+  const source = originalSource.replace('import("./birefnetWorkerClient.js")', `import(${JSON.stringify(primary)})`).replace('import("./modnetWorkerClient.js")', `import(${JSON.stringify(fallback)})`);
   const descriptors = Object.fromEntries(["window", "document", "navigator", "createImageBitmap"].map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   Object.defineProperties(globalThis, {
     window: { configurable: true, value: {} },
@@ -151,6 +151,21 @@ test("a failed silent BiRefNet preload cannot gate or disable the fallback", asy
     assert.equal(await api.preloadBgModel(), "modnet");
     await api.removeBg(photo());
     assert.ok(calls.includes("modnet"));
+  });
+});
+
+test("a preparation failure shared by startup and a photo never becomes a user Cancel", async () => {
+  let rejectPreparation;
+  const shared = new Promise((resolve, reject) => { rejectPreparation = reject; });
+  await using({ prepare: () => shared }, async ({ api, calls }) => {
+    const startup = api.preloadBgModel();
+    const photoRun = api.removeBg(photo());
+    await new Promise(resolve => setImmediate(resolve));
+    rejectPreparation(new Error("GPU preparation failed"));
+    assert.equal(await startup, "modnet");
+    assert.equal(await (await photoRun).text(), "valid");
+    assert.equal(calls.filter(x => x === "primary-session").length, 1);
+    assert.equal(calls.filter(x => x === "modnet").length, 1);
   });
 });
 

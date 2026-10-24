@@ -66,15 +66,29 @@ async function tryWorkerEncoding(canvas, type, quality) {
 }
 
 function originalCanvasEncoding(canvas, type, quality) {
-  return new Promise((resolve) => {
-    canvas.toBlob(resolve, type, quality);
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const fallback = () => {
+      if (settled) return;
+      settled = true; clearTimeout(timer);
+      try {
+        const [header, encoded] = canvas.toDataURL(type, quality).split(',');
+        const bytes = Uint8Array.from(atob(encoded), ch => ch.charCodeAt(0));
+        resolve(new Blob([bytes], { type: header.match(/data:([^;]+)/)?.[1] || type }));
+      } catch (error) { reject(error); }
+    };
+    const timer = setTimeout(fallback, 2000);
+    try {
+      canvas.toBlob(blob => {
+        if (settled) return;
+        if (!blob) { fallback(); return; }
+        settled = true; clearTimeout(timer); resolve(blob);
+      }, type, quality);
+    } catch { fallback(); }
   });
 }
-
 export async function encodeCropCanvas(canvas, type, quality) {
-  try {
-    return await tryWorkerEncoding(canvas, type, quality);
-  } catch {
-    return originalCanvasEncoding(canvas, type, quality);
-  }
+  if (canvas.width * canvas.height <= 1500000) return originalCanvasEncoding(canvas, type, quality);
+  try { return await tryWorkerEncoding(canvas, type, quality); }
+  catch { return originalCanvasEncoding(canvas, type, quality); }
 }

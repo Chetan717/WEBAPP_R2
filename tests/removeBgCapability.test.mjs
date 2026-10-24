@@ -11,7 +11,8 @@ async function capability({ f16 = true, gpu = true, memory = 8, cores = 8, adapt
     gpu: gpu ? { requestAdapter: async () => adapter ? { features: new Set(f16 ? ["shader-f16"] : []), limits: { maxStorageBuffersPerShaderStage: 8 } } : null } : undefined,
   } });
   try {
-    const source = readFileSync(new URL("../src/pages/mainform/utils/birefnetBg.js", import.meta.url), "utf8").replaceAll("import.meta.env", "{}");
+    const source = readFileSync(new URL("../src/pages/mainform/utils/birefnetBg.js", import.meta.url), "utf8").replace(/from "(\.[^"]+)"/g, (_, spec) => `from "${new URL(spec, new URL("../src/pages/mainform/utils/", import.meta.url)).href}"`)
+    .replaceAll("import.meta.env", "{}");
     const module = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#capability-${++serial}`);
     return await module.getBirefNetCapability();
   } finally {
@@ -36,4 +37,7 @@ test("low-memory devices keep the existing safe fallback policy", async () => {
 });
 test("an unavailable WebGPU adapter is treated as unsupported", async () => {
   assert.deepEqual(await capability({ adapter: false }), { supported: false, reason: "webgpu-adapter-unavailable" });
+});
+test("a capable GPU is not rejected merely because the browser exposes two CPU cores", async () => {
+  assert.equal((await capability({ cores: 2 })).supported, true);
 });

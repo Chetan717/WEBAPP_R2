@@ -1,3 +1,4 @@
+import { fetchAiAsset } from "./aiAssetCache.js";
 /**
  * Local, free portrait matting powered by MODNet (Apache-2.0).
  *
@@ -9,6 +10,7 @@
 
 let runtimePromise = null;
 let sessionPromise = null;
+const preparationListeners = new Set();
 let assetRevision = 0;
 let forceFreshModelFetch = false;
 // Bump whenever either the model or its matching ONNX Runtime WASM changes.
@@ -52,7 +54,7 @@ function tagEngineError(error, stage, retryable = false) {
 }
 
 function versionedAssetUrl(base, fileName) {
-  const url = new URL(`${base}${fileName}`, window.location.href);
+  const url = new URL(`${base}${fileName}`, (globalThis.location?.href || globalThis.window?.location?.href));
   url.searchParams.set("v", MODEL_ASSET_VERSION);
   if (assetRevision > 0) url.searchParams.set("retry", String(assetRevision));
   return url.href;
@@ -86,7 +88,7 @@ function isMobileRuntime() {
 async function loadRuntime() {
   if (!runtimePromise) {
     runtimePromise = import("onnxruntime-web/wasm")
-      .then((module) => {
+      .then(async (module) => {
         const ort = module.default || module;
         // A single WASM thread avoids SharedArrayBuffer/crossOriginIsolated
         // requirements in React Native WebView. Direct same-origin paths avoid
@@ -100,6 +102,10 @@ async function loadRuntime() {
           wasm: localAssetUrl("ort-wasm-simd-threaded.wasm"),
           mjs: localAssetUrl("ort-wasm-simd-threaded.mjs"),
         };
+        ort.env.wasm.wasmBinary = (await fetchAiAsset(ort.env.wasm.wasmPaths.wasm, {
+          asset: "modnet-wasm", size: 12666427, magic: [0,97,115,109],
+          onProgress: pct => { for (const listener of preparationListeners) listener("Portrait AI runtime तैयार हो रहा है…", 2 + pct * .12); },
+        })).buffer;
         return ort;
       })
       .catch((error) => {
@@ -111,77 +117,30 @@ async function loadRuntime() {
 }
 
 async function fetchModel(onProgress) {
-  const cacheMode = forceFreshModelFetch ? "reload" : "force-cache";
-  forceFreshModelFetch = false;
-
-  // Prefer the R2 model to keep normal bandwidth off Vercel, but always keep
-  // the bundled same-origin model as a zero-configuration mobile fallback.
-  const candidates = [remoteModelUrl(), localAssetUrl("modnet.onnx")].filter(Boolean);
-  let lastError = null;
-  let response = null;
-
-  for (const candidate of [...new Set(candidates)]) {
+  const fresh = forceFreshModelFetch; forceFreshModelFetch = false;
+  let last;
+  for (const url of [...new Set([remoteModelUrl(), localAssetUrl("modnet.onnx")].filter(Boolean))]) {
     try {
-      const attempt = await fetch(candidate, {
-        cache: cacheMode,
-        mode: "cors",
-        credentials: "omit",
-      });
-      if (attempt.ok) {
-        response = attempt;
-        break;
-      }
-      lastError = new Error(`Portrait model download failed (${attempt.status}).`);
-    } catch (error) {
-      lastError = error;
-    }
+      const parsed = new URL(url);
+      const nativeAsset = (parsed.hostname === "models.mlmposter.com" && parsed.pathname === "/modnet/modnet.onnx") ||
+        (parsed.origin === new URL(globalThis.location?.href || globalThis.window?.location?.href).origin && parsed.pathname === "/modnet/modnet.onnx") ? "modnet" : undefined;
+      return await fetchAiAsset(url, { asset: nativeAsset, size: 25888640, magic: [8], fresh,
+        onProgress: pct => onProgress?.("Portrait AI तैयार हो रहा है…", 8 + pct * .30) });
+    } catch (e) { last = e; }
   }
-
-  if (!response) {
-    throw tagEngineError(lastError || new Error("Portrait model download failed."), "model-download", true);
-  }
-
-  const expectedSize = Number(response.headers.get("content-length")) || 0;
-  if (!response.body?.getReader) {
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    onProgress?.("Professional AI मॉडल तैयार है…", 38);
-    return bytes;
-  }
-
-  const reader = response.body.getReader();
-  const chunks = [];
-  let received = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    received += value.length;
-    const ratio = expectedSize > 0 ? Math.min(1, received / expectedSize) : 0;
-    onProgress?.(
-      isMobileRuntime()
-        ? "Mobile portrait AI पहली बार तैयार हो रहा है…"
-        : "Professional AI मॉडल पहली बार डाउनलोड हो रहा है…",
-      8 + ratio * 30,
-    );
-  }
-
-  const bytes = new Uint8Array(received);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return bytes;
+  throw tagEngineError(last || new Error("Portrait model download failed"), "model-download", true);
 }
 
 async function getSession(onProgress) {
+  if (onProgress) preparationListeners.add(onProgress);
+  const report = (stage, pct) => { for (const listener of preparationListeners) listener(stage, pct); };
   if (!sessionPromise) {
     sessionPromise = (async () => {
       const [ort, model] = await Promise.all([
         loadRuntime(),
-        fetchModel(onProgress),
+        fetchModel(report),
       ]);
-      onProgress?.("Professional portrait engine शुरू हो रहा है…", 42);
+      report("Professional portrait engine शुरू हो रहा है…", 42);
       return ort.InferenceSession.create(model, {
         executionProviders: ["wasm"],
         graphOptimizationLevel: "all",
@@ -193,7 +152,7 @@ async function getSession(onProgress) {
       throw tagEngineError(error, "engine-init", true);
     });
   }
-  return sessionPromise;
+  try { return await sessionPromise; } finally { if (onProgress) preparationListeners.delete(onProgress); }
 }
 
 async function decodeImage(file) {
@@ -540,7 +499,7 @@ function getMatteBounds(values, width, height, threshold = 0.08) {
 }
 
 function matteToCanvas(values, width, height) {
-  const canvas = document.createElement("canvas");
+  const canvas = createCanvas();
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext("2d");
@@ -580,7 +539,7 @@ async function runModNetInference(
     mobileRuntime ? 512 : INFERENCE_REFERENCE_SIZE,
     mobileRuntime ? 768 : MAX_INFERENCE_SIDE,
   );
-  const inferenceCanvas = document.createElement("canvas");
+  const inferenceCanvas = createCanvas();
   inferenceCanvas.width = inferenceSize.width;
   inferenceCanvas.height = inferenceSize.height;
   const inferenceContext = inferenceCanvas.getContext("2d", {
@@ -710,7 +669,7 @@ function buildAlphaMap(globalMatte, detailMatte, width, height) {
     globalMatte.width,
     globalMatte.height,
   );
-  const outputCanvas = document.createElement("canvas");
+  const outputCanvas = createCanvas();
   outputCanvas.width = width;
   outputCanvas.height = height;
   const outputContext = outputCanvas.getContext("2d", {
@@ -871,7 +830,7 @@ export async function removeBackgroundWithModNet(file, onProgress, signal) {
     mobileRuntime ? 1600 : MAX_OUTPUT_SIDE,
     mobileRuntime ? 1600 * 1200 : MAX_OUTPUT_PIXELS,
   );
-  const sourceCanvas = document.createElement("canvas");
+  const sourceCanvas = createCanvas();
   sourceCanvas.width = safeOutput.width;
   sourceCanvas.height = safeOutput.height;
   const sourceContext = sourceCanvas.getContext("2d", {
@@ -1003,7 +962,7 @@ export async function removeBackgroundWithModNet(file, onProgress, signal) {
     }
   }
 
-  const outputCanvas = document.createElement("canvas");
+  const outputCanvas = createCanvas();
   outputCanvas.width = sourceCanvas.width;
   outputCanvas.height = sourceCanvas.height;
   const outputContext = outputCanvas.getContext("2d");
@@ -1015,6 +974,7 @@ export async function removeBackgroundWithModNet(file, onProgress, signal) {
   );
 
   onProgress?.("Lossless Transparent PNG तैयार हो रही है…", 97);
+  if (typeof outputCanvas.convertToBlob === "function") return outputCanvas.convertToBlob({ type: "image/png" });
   return new Promise((resolve, reject) => {
     outputCanvas.toBlob(
       (blob) => {
@@ -1041,4 +1001,8 @@ export async function removeBackgroundWithModNet(file, onProgress, signal) {
       "image/png",
     );
   });
+}
+
+function createCanvas() {
+  return typeof OffscreenCanvas === "function" ? new OffscreenCanvas(1, 1) : document.createElement("canvas");
 }

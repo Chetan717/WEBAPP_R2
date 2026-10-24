@@ -19,6 +19,7 @@ async function using(check) {
   });
   const source = readFileSync(new URL("../src/pages/mainform/utils/birefnetWorkerClient.js", import.meta.url), "utf8")
     .replace('import { getBirefNetCapability as getEngineCapability } from "./birefnetBg.js";', 'const getEngineCapability = async () => ({ supported: true });')
+    .replace('from "./aiWorkerClient.js"', `from "${new URL("../src/pages/mainform/utils/aiWorkerClient.js", import.meta.url).href}"`)
     .replace('new URL("./birefnetWorker.js", import.meta.url)', '"worker-test-url"');
   const api = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#worker-${++serial}`);
   try { await check({ api, workers }); }
@@ -49,21 +50,20 @@ test("preload and photo processing use the same worker and report their actual p
   });
 });
 
-test("Cancel releases the worker and all pending work, then a new photo can start", async () => {
+test("Cancel rejects only the photo and retains the prepared worker", async () => {
   await using(async ({ api, workers }) => {
     const controller = new AbortController();
     const preload = api.preloadBirefNet();
     const process = api.removeBackgroundWithBirefNet(new Blob(["photo"]), undefined, controller.signal);
-    const rejected = Promise.all([
-      assert.rejects(preload, { name: "AbortError" }),
-      assert.rejects(process, { name: "AbortError" }),
-    ]);
-    controller.abort();
-    await rejected;
-    assert.equal(workers[0].terminated, true);
+    const rejected = assert.rejects(process, { name: "AbortError" });
+    controller.abort(); await rejected;
+    assert.equal(workers[0].terminated, false);
+    workers[0].reply({ id: workers[0].messages[0].id, type: "done", value: "ready" });
+    await preload;
     const next = api.removeBackgroundWithBirefNet(new Blob(["next photo"]));
-    assert.equal(workers.length, 2);
-    workers[1].reply({ id: workers[1].messages[0].id, type: "done", value: new Blob(["next cutout"]) });
+    assert.equal(workers.length, 1);
+    const request = workers[0].messages.at(-1);
+    workers[0].reply({ id: request.id, type: "done", value: new Blob(["next cutout"]) });
     assert.equal(await (await next).text(), "next cutout");
   });
 });

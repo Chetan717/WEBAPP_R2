@@ -1,3 +1,5 @@
+import { fetchAiAsset } from "./aiAssetCache.js";
+import { nativeEnabled, fetchNativeAsset, backupNativeAsset } from "./modelWorkerNativeTransport.js";
 /**
  * High-quality on-device background removal with BiRefNet Lite 512 FP16.
  *
@@ -22,6 +24,7 @@ const IMAGENET_STD = [0.229, 0.224, 0.225];
 let runtimePromise = null;
 let sessionPromise = null;
 let capabilityPromise = null;
+let warmupPromise = null;
 let forceFreshModelFetch = false;
 let modelRevision = 0;
 const preparationListeners = new Set();
@@ -97,10 +100,6 @@ export async function getBirefNetCapability() {
     if (deviceMemory > 0 && deviceMemory < 4) {
       return { supported: false, reason: "low-device-memory" };
     }
-    const cores = Number(navigator.hardwareConcurrency || 0);
-    if (cores > 0 && cores < 4) {
-      return { supported: false, reason: "low-cpu-tier" };
-    }
 
     try {
       const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
@@ -125,7 +124,7 @@ export async function getBirefNetCapability() {
 async function loadRuntime() {
   if (!runtimePromise) {
     runtimePromise = import("onnxruntime-web/webgpu")
-      .then((module) => {
+      .then(async (module) => {
         const ort = module.default || module;
         // WebGPU also requires the JSEP WASM runtime. An inferred URL under
         // Vite's dependency cache can return the SPA HTML instead of WASM.
@@ -139,6 +138,10 @@ async function loadRuntime() {
           wasm: `${base}ort-wasm-simd-threaded.jsep.wasm?v=${version}`,
           mjs: `${base}ort-wasm-simd-threaded.jsep.mjs?v=${version}`,
         };
+        ort.env.wasm.wasmBinary = (await fetchAiAsset(ort.env.wasm.wasmPaths.wasm, {
+          asset: "birefnet-wasm", size: 23914392, magic: [0,97,115,109],
+          onProgress: pct => { for (const listener of preparationListeners) listener("AI runtime तैयार हो रहा है…", 2 + pct * .12); },
+        })).buffer;
         ort.env.logLevel = "warning";
         return ort;
       })
@@ -243,6 +246,7 @@ async function persistModel(request, bytes) {
 async function fetchModel(onProgress, signal) {
   throwIfAborted(signal);
   const modelUrl = getBirefNetModelUrl();
+  const knownNativeModel = new URL(modelUrl).hostname === "models.mlmposter.com" && new URL(modelUrl).pathname === "/birefnet/model_fp16.onnx";
   const request = new Request(modelUrl, { mode: "cors", credentials: "omit" });
 
   if (!forceFreshModelFetch && "caches" in globalThis) {
@@ -260,6 +264,7 @@ async function fetchModel(onProgress, signal) {
             onProgress?.("Cached high-quality AI model मिल गया…", 30);
             const bytes = validateModelBytes(await readResponseWithProgress(cached, onProgress, signal), modelUrl);
             if (name !== MODEL_CACHE_NAME || key.url !== request.url) await persistModel(request, bytes);
+            if (knownNativeModel) backupNativeAsset("birefnet", modelUrl);
             return bytes;
           } catch (error) {
             if (error?.name === "AbortError") throw error;
@@ -273,6 +278,16 @@ async function fetchModel(onProgress, signal) {
       // Cache Storage can be disabled/private-mode limited. HTTP cache still
       // provides a second persistence layer, so continue normally.
     }
+  }
+
+  if (knownNativeModel && nativeEnabled()) {
+    try {
+      const bytes = validateModelBytes(await fetchNativeAsset("birefnet", modelUrl,
+        pct => onProgress?.("High-quality AI model तैयार हो रहा है…", 4 + pct * 0.34)), modelUrl);
+      // The complete binary is already durable in Expo Documents. Avoid a
+      // second 98 MB disk write/Response copy during native startup.
+      return bytes;
+    } catch (e) { if (!e.nativeCacheFailure) throw e; }
   }
 
   let response;
@@ -301,6 +316,7 @@ async function fetchModel(onProgress, signal) {
     }, controller.signal), modelUrl);
     clearTimeout(timer);
     await persistModel(request, bytes);
+    if (knownNativeModel) backupNativeAsset("birefnet", modelUrl);
     return bytes;
   } catch (error) {
     if (!signal?.aborted && controller.signal.aborted) {
@@ -332,14 +348,14 @@ async function getSession(onProgress, signal) {
 
       const [ort, model] = await Promise.all([
         loadRuntime(),
-        fetchModel(report, signal),
+        fetchModel(report),
       ]);
-      throwIfAborted(signal);
       report("High-quality portrait AI शुरू हो रहा है…", 43);
       try {
         return await ort.InferenceSession.create(model, {
           executionProviders: ["webgpu"],
-          graphOptimizationLevel: "all",
+          graphOptimizationLevel: "basic",
+          enableCpuMemArena: false,
           executionMode: "sequential",
         });
       } catch (error) {
@@ -559,6 +575,18 @@ export async function preloadBirefNet(onProgress, signal) {
   return "birefnet-webgpu";
 }
 
+export async function warmupBirefNet(onProgress) {
+  if (!warmupPromise) warmupPromise = (async () => {
+    const [ort, session] = await Promise.all([loadRuntime(), getSession(onProgress)]);
+    onProgress?.("High-quality AI तैयार हो रहा है…", 46);
+    const tensor = new ort.Tensor("float32", new Float32Array(3 * MODEL_SIZE * MODEL_SIZE), [1,3,MODEL_SIZE,MODEL_SIZE]);
+    let result;
+    try { result = await session.run({ [session.inputNames[0]]: tensor }); }
+    finally { tensor.dispose?.(); for (const out of new Set(Object.values(result || {}))) out.dispose?.(); }
+  })().catch(e => { warmupPromise = null; throw e; });
+  return warmupPromise;
+}
+
 export async function removeBackgroundWithBirefNet(file, onProgress, signal) {
   throwIfAborted(signal);
   const [ort, session] = await Promise.all([
@@ -567,6 +595,8 @@ export async function removeBackgroundWithBirefNet(file, onProgress, signal) {
   ]);
   throwIfAborted(signal);
 
+  if (warmupPromise) await warmupPromise;
+  throwIfAborted(signal);
   const decoded = await decodeImage(file);
   let input;
   let outputs;
@@ -605,6 +635,7 @@ export async function resetBirefNetEngine({ freshAssets = false } = {}) {
   const previous = sessionPromise;
   sessionPromise = null;
   capabilityPromise = null;
+  warmupPromise = null;
   if (previous) void previous.then(session => session.release()).catch(() => {});
   if (freshAssets) {
     forceFreshModelFetch = true;

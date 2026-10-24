@@ -197,6 +197,7 @@ export function ImageEditorCanvas({
   editingType,
   constrainToImage = true,
   enableEnhance = false,
+  processing = false,
 }) {
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
@@ -205,7 +206,15 @@ export function ImageEditorCanvas({
   const [tab, setTab] = useState("crop");
   const [enhance, setEnhance] = useState(() => (enableEnhance ? 65 : 0));
   const [skinTone, setSkinTone] = useState(0);
+  const isDoingRef = useRef(false);
   const [isDoing, setIsDoing] = useState(false);
+  const sourceRevision = useRef(0);
+  useEffect(() => {
+    sourceRevision.current += 1;
+    clearInterval(progressTimerRef.current);
+    isDoingRef.current = false;
+    return () => { sourceRevision.current += 1; clearInterval(progressTimerRef.current); };
+  }, [src]);
   const [isImageReady, setIsImageReady] = useState(false);
   const [encodeProgress, setEncodeProgress] = useState(0);
 
@@ -876,11 +885,13 @@ export function ImageEditorCanvas({
 
   // ── Export ─────────────────────────────────────────────────────
   const handleDone = () => {
-    if (isDoing) return;
+    if (isDoingRef.current || processing) return;
+    const revision = sourceRevision.current;
 
     const img = imgRef.current;
     if (!img) return;
 
+    isDoingRef.current = true;
     setIsDoing(true);
     setEncodeProgress(0);
 
@@ -967,9 +978,11 @@ export function ImageEditorCanvas({
       exportType,
       exportType === "image/webp" ? 0.92 : undefined,
     ).then((blob) => {
+        if (revision !== sourceRevision.current) return;
         clearInterval(progressTimerRef.current);
 
         if (!blob) {
+          isDoingRef.current = false;
           setIsDoing(false);
           setEncodeProgress(0);
           toast.danger("Photo could not be saved. Please try again.");
@@ -980,12 +993,15 @@ export function ImageEditorCanvas({
         try {
           onDone(blob);
         } finally {
+          isDoingRef.current = false;
           setIsDoing(false);
           setEncodeProgress(0);
         }
       }).catch((error) => {
+        if (revision !== sourceRevision.current) return;
         clearInterval(progressTimerRef.current);
         console.error("[MLMProfileImageEditor] Crop encoding failed:", error);
+        isDoingRef.current = false;
         setIsDoing(false);
         setEncodeProgress(0);
         toast.danger("Photo could not be saved. Please try again.");
@@ -1066,7 +1082,12 @@ export function ImageEditorCanvas({
       >
         <button
           type="button"
-          onClick={onCancel}
+          aria-label="Cancel"
+          onClick={() => {
+            sourceRevision.current += 1;
+            clearInterval(progressTimerRef.current);
+            onCancel();
+          }}
           style={{
             background: "none",
             border: "none",
@@ -1091,7 +1112,7 @@ export function ImageEditorCanvas({
 
         <button
           type="button"
-          disabled={isDoing || !isImageReady}
+          disabled={processing || isDoing || !isImageReady}
           onClick={handleDone}
           style={{
             background: isDoing || !isImageReady

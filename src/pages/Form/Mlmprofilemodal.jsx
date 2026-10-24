@@ -571,7 +571,13 @@ export default function MLMProfilePage() {
   }, []);
   const [errors, setErrors] = useState({});
   const [step, setStep] = useState("form");
+  const bgJob = useRef(0);
+  const submittedCrop = useRef(null);
+  useEffect(() => () => {
+    bgJob.current += 1; abortProfileRef.current?.abort(); abortTopupRef.current?.abort();
+  }, []);
   const [editorSrc, setEditorSrc] = useState(null);
+  useEffect(() => { submittedCrop.current = null; }, [editorSrc]);
   const [editingProfileIndex, setEditingProfileIndex] = useState(null);
   const [removingBg, setRemovingBg] = useState(false);
   const [removingTopupBg, setRemovingTopupBg] = useState(false);
@@ -931,7 +937,7 @@ export default function MLMProfilePage() {
     void preloadBgModel().catch(() => {
       // The processing step will retry or use the bundled fallback.
     });
-    setEditorSrc(URL.createObjectURL(files[0]));
+    setEditorSrc(files[0]);
     setEditorContext("topup");
     setEditorStage("initial");
     setStep("editor");
@@ -949,6 +955,7 @@ export default function MLMProfilePage() {
   };
 
   const cancelTopupBg = () => {
+    bgJob.current += 1; submittedCrop.current = null;
     if (abortTopupRef.current) {
       abortTopupRef.current.abort();
       abortTopupRef.current = null;
@@ -964,6 +971,8 @@ export default function MLMProfilePage() {
   };
 
   const processTopupFile = async (file) => {
+    if (abortTopupRef.current || abortProfileRef.current) return;
+    const job = ++bgJob.current;
     const previewUrl = URL.createObjectURL(file);
     setBgPreviewUrl(previewUrl);
     setRemovingTopupBg(true);
@@ -975,34 +984,35 @@ export default function MLMProfilePage() {
       let blob = await removeBackground(
         file,
         (stage, pct) => {
+          if (job !== bgJob.current || controller.signal.aborted) return;
           setBgProgressMsg(stage);
           setBgProgressPct(pct);
         },
         controller.signal,
       );
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || job !== bgJob.current) return;
       toast.success("Background removed successfully! ✨");
-      setEditorSrc(URL.createObjectURL(blob));
+      setEditorSrc(blob);
       setEditorContext("topup");
       setEditorStage("final");
       setStep("editor");
       toast("Adjust the final crop, then tap Done.");
     } catch (err) {
-      if (err?.name === "AbortError" || controller.signal.aborted) return;
+      if (err?.name === "AbortError" || controller.signal.aborted || job !== bgJob.current) return;
       
       console.error("[removeBg] Top-up image processing failed:", err, err?.cause);
-      setEditorSrc(null);
-      setEditorStage("final");
-      setStep("form");
+      submittedCrop.current = null;
       toast.danger(
         "Background removal could not start. Please select the photo again and retry.",
       );
     } finally {
+      if (job === bgJob.current) {
       abortTopupRef.current = null;
       setRemovingTopupBg(false);
       setBgProgressMsg("Please wait…");
       setBgProgressPct(0);
       setBgPreviewUrl(null);
+      }
       URL.revokeObjectURL(previewUrl);
     }
   };
@@ -1050,7 +1060,7 @@ export default function MLMProfilePage() {
       // The processing step will retry or use the bundled fallback.
     });
 
-    setEditorSrc(URL.createObjectURL(file));
+    setEditorSrc(file);
     setEditingProfileIndex("new");
     setEditorContext("profile");
     setEditorStage("initial");
@@ -1058,6 +1068,7 @@ export default function MLMProfilePage() {
   };
 
   const cancelProfileBg = () => {
+    bgJob.current += 1; submittedCrop.current = null;
     if (abortProfileRef.current) {
       abortProfileRef.current.abort();
       abortProfileRef.current = null;
@@ -1074,6 +1085,8 @@ export default function MLMProfilePage() {
   };
 
   const processProfileFile = async (file) => {
+    if (abortTopupRef.current || abortProfileRef.current) return;
+    const job = ++bgJob.current;
     const previewUrl = URL.createObjectURL(file);
     setBgPreviewUrl(previewUrl);
     setRemovingBg(true);
@@ -1085,14 +1098,15 @@ export default function MLMProfilePage() {
       let blob = await removeBackground(
         file,
         (stage, pct) => {
+          if (job !== bgJob.current || controller.signal.aborted) return;
           setBgProgressMsg(stage);
           setBgProgressPct(pct);
         },
         controller.signal,
       );
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || job !== bgJob.current) return;
       toast.success("Background removed successfully! ✨");
-      setEditorSrc(URL.createObjectURL(blob));
+      setEditorSrc(blob);
       setEditingProfileIndex("new");
       setForm((f) => ({ ...f, _pendingProfileBlobs: [] }));
       setEditorContext("profile");
@@ -1100,27 +1114,28 @@ export default function MLMProfilePage() {
       setStep("editor");
       toast("Adjust the final crop, then tap Done.");
     } catch (err) {
-      if (err?.name === "AbortError" || controller.signal.aborted) return;
+      if (err?.name === "AbortError" || controller.signal.aborted || job !== bgJob.current) return;
       
       console.error("[removeBg] Profile image processing failed:", err, err?.cause);
-      setEditorSrc(null);
-      setEditingProfileIndex(null);
-      setEditorStage("final");
-      setStep("form");
+      submittedCrop.current = null;
       toast.danger(
         "Background removal could not start. Please select the photo again and retry.",
       );
     } finally {
+      if (job === bgJob.current) {
       abortProfileRef.current = null;
       setRemovingBg(false);
       setBgProgressMsg("Please wait…");
       setBgProgressPct(0);
       setBgPreviewUrl(null);
+      }
       URL.revokeObjectURL(previewUrl);
     }
   };
 
   const handleEditorDone = (blob) => {
+    if (isBgRemoving || (submittedCrop.current?.src === editorSrc && submittedCrop.current?.stage === editorStage)) return;
+    submittedCrop.current = { src: editorSrc, stage: editorStage };
     if (editorStage === "initial" && editorContext === "topup") {
       processTopupFile(blob);
       return;
@@ -1521,9 +1536,8 @@ export default function MLMProfilePage() {
       <>
         <div className="flex flex-col w-full h-full items-center justify-center bg-muted/20">
           <div className="w-full h-full bg-background rounded-2xl border border-border shadow-md">
-            {!isBgRemoving && (
               <ImageEditorCanvas
-                key={editorSrc}
+                processing={isBgRemoving}
                 src={editorSrc}
                 ratio={
                   editorContext === "logo" || editorContext === "topup"
@@ -1543,7 +1557,6 @@ export default function MLMProfilePage() {
                   setEditorStage("final");
                 }}
               />
-            )}
           </div>
         </div>
 

@@ -7,7 +7,8 @@ async function urls(environment) {
   const oldWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   Object.defineProperty(globalThis, "window", { configurable: true, value: { location: { href: "https://app.mlmlive.in/mlmprofile" } } });
   const load = async (name, exports = "") => {
-    const source = readFileSync(new URL(`../src/pages/mainform/utils/${name}.js`, import.meta.url), "utf8").replaceAll("import.meta.env", JSON.stringify({ BASE_URL: "/", ...environment }));
+    const source = readFileSync(new URL(`../src/pages/mainform/utils/${name}.js`, import.meta.url), "utf8").replace(/from "(\.[^"]+)"/g, (_, spec) => `from "${new URL(spec, new URL("../src/pages/mainform/utils/", import.meta.url)).href}"`)
+    .replaceAll("import.meta.env", JSON.stringify({ BASE_URL: "/", ...environment }));
     return import(`data:text/javascript;base64,${Buffer.from(source + exports).toString("base64")}#${++serial}`);
   };
   try {

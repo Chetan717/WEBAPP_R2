@@ -20,6 +20,7 @@ let birefNetPromise = null;
 let modNetPromise = null;
 let preloadPromise = null;
 let selectedEnginePromise = null;
+let primaryPreparationFailure = null;
 let activeProgress = null;
 let processingTail = Promise.resolve();
 
@@ -48,7 +49,7 @@ async function loadBirefNetEngine() {
 
 async function loadModNetEngine() {
   if (!modNetPromise) {
-    modNetPromise = import("./modnetBg.js").catch((error) => {
+    modNetPromise = import("./modnetWorkerClient.js").catch((error) => {
       modNetPromise = null;
       throw error;
     });
@@ -103,12 +104,13 @@ export async function preloadBgModel(onProgress) {
     preloadPromise = (async () => {
       const selected = await selectBestEngine();
       if (selected === "birefnet") {
-        const { preloadBirefNet, resetBirefNetEngine } = await loadBirefNetEngine();
+        const { preloadBirefNet } = await loadBirefNetEngine();
         try {
           await preloadBirefNet(report);
         } catch (error) {
-          resetBirefNetEngine();
           if (error?.name === "AbortError") throw error;
+          primaryPreparationFailure = error;
+          error.removeBgPreparationFailed = true;
           if (error?.removeBgUnsupported) selectedEnginePromise = Promise.resolve("modnet");
           const { preloadModNet } = await loadModNetEngine();
           await preloadModNet(report);
@@ -158,13 +160,15 @@ function queueProcessing(task, signal) {
 }
 
 async function runBirefNet(file, signal) {
+  if (primaryPreparationFailure) throw primaryPreparationFailure;
   const { removeBackgroundWithBirefNet } = await loadBirefNetEngine();
   throwIfAborted(signal);
-  const result = await removeBackgroundWithBirefNet(
+  let result;
+  try { result = await removeBackgroundWithBirefNet(
     file,
     (stage, percentage) => emitProgress(stage, percentage),
     signal,
-  );
+  ); } catch (error) { throw primaryPreparationFailure || error; }
   if (!(result instanceof Blob) || result.size === 0) {
     throw new Error("BiRefNet returned an empty image.");
   }
@@ -314,6 +318,7 @@ async function validateTransparentResult(blob, engine, signal) {
 }
 
 export function isRetryableRemoveBgError(error) {
+  if (error?.removeBgPreparationFailed) return false;
   let current = error;
   const visited = new Set();
   while (current && !visited.has(current)) {
@@ -379,7 +384,7 @@ async function removeWithPreferredEngine(file, signal) {
       if (error?.name === "AbortError" || signal?.aborted) throw abortError();
       console.warn("[removeBg] BiRefNet failed; falling back to MODNet for this photo.", error);
       const { resetBirefNetEngine } = await loadBirefNetEngine();
-      resetBirefNetEngine();
+      if (!error?.removeBgInvalidMask) resetBirefNetEngine();
       if (error?.removeBgUnsupported === true) selectedEnginePromise = Promise.resolve("modnet");
       preloadPromise = null;
       emitProgress("BiRefNet पूरा नहीं हुआ. Portrait fallback तैयार हो रहा है…", 6);
@@ -432,6 +437,7 @@ export async function removeBg(file, onProgress, signal) {
 
 /** Rebuild sessions after an explicit repair; keep the persisted BiRefNet model. */
 export function refreshRemoveBgKeys() {
+  primaryPreparationFailure = null;
   preloadPromise = null;
   selectedEnginePromise = null;
   if (birefNetPromise) {

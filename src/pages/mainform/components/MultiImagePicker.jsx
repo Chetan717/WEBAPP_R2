@@ -74,128 +74,65 @@ export default function MultiImagePicker({
   // become "active" based on a possibly-stale render snapshot.
   const processingRef = useRef(false);
 
-  // Pulls the next file off the queue using functional state updates so it
-  // never operates on a stale `pendingQueue` snapshot captured by an older
-  // render (e.g. if more files were queued while a file was processing).
+  const queueRef = useRef([]);
+  const generation = useRef(0);
+  const stageRef = useRef(null);
+  const setStage = stage => { stageRef.current = stage; setCropStage(stage); };
+  useEffect(() => () => { generation.current += 1; abortRef.current?.abort(); }, []);
   const advanceQueue = () => {
-    setPendingQueue((prev) => {
-      if (!prev.length) {
-        processingRef.current = false;
-        return prev;
-      }
-      const [next, ...rest] = prev;
-      setActiveFile(next);
-      setEditingImage(URL.createObjectURL(next));
-      setCropStage("initial");
-      setCropOpen(true);
-      return rest;
-    });
+    generation.current += 1;
+    const next = queueRef.current.shift(); setPendingQueue([...queueRef.current]);
+    setBgLoading(false); setBgPreviewUrl(null); setBgProgressMsg(''); setBgProgressPct(0);
+    if (!next) {
+      processingRef.current = false; setActiveFile(null); setEditingImage(null); setCropOpen(false); setStage(null); return;
+    }
+    setOpen(false);
+    processingRef.current = true; setActiveFile(next); setEditingImage(next); setStage('initial'); setCropOpen(true);
   };
-
   const cancelActiveProcessing = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setBgLoading(false);
-    setBgProgressMsg("");
-    setBgProgressPct(0);
-    setBgPreviewUrl(null);
-    setCropOpen(false);
-    setEditingImage(null);
-    setCropStage(null);
-    setActiveFile(null);
-    advanceQueue();
-    toast("Background removal cancelled.");
+    generation.current += 1; abortRef.current?.abort(); abortRef.current = null;
+    advanceQueue(); toast('Background removal cancelled.');
   };
-
-  // Adds newly selected files to the queue, starting processing immediately
-  // if nothing is currently in flight.
-  const enqueueFiles = (files) => {
-    // Model loading starts only after a user selects a photo and overlaps the
-    // first crop; this keeps startup/CDN optimisation intact.
-    void preloadBgModel().catch(() => {
-      // removeBg() owns the normal retry/fallback and user-facing error.
-    });
-    if (!processingRef.current) {
-      processingRef.current = true;
-      const [first, ...rest] = files;
-      setActiveFile(first);
-      setEditingImage(URL.createObjectURL(first));
-      setCropStage("initial");
-      setCropOpen(true);
-      setPendingQueue((prev) => [...prev, ...rest]);
-    } else {
-      setPendingQueue((prev) => [...prev, ...files]);
-    }
+  const enqueueFiles = files => {
+    if (!files.length) return;
+    void preloadBgModel().catch(() => {});
+    queueRef.current.push(...files); setPendingQueue([...queueRef.current]);
+    if (!processingRef.current) advanceQueue();
   };
-
-  const handleCropDone = (blob) => {
-    if (cropStage === "final") {
-      setCropOpen(false);
-      setEditingImage(null);
-      setCropStage(null);
-      setActiveFile(null);
+  const handleCropDone = (blob, id) => {
+    if (id !== generation.current || stageRef.current === 'processing' || !blob) return false;
+    if (stageRef.current === 'final') {
+      setStage(null);
       onAddCustomFiles([{ file: blob, previewURL: URL.createObjectURL(blob) }]);
-      advanceQueue();
-      return true;
+      advanceQueue(); return false;
     }
-
-    // First crop is complete. Keep the editor open, remove the background,
-    // then replace its source with the transparent result for the final crop.
-    const previewUrl = URL.createObjectURL(blob);
-    setBgPreviewUrl(previewUrl);
-    setBgProgressMsg("AI आपकी फोटो तैयार कर रहा है…");
-    setBgProgressPct(0);
-    setBgLoading(true);
-    const controller = new AbortController();
-    abortRef.current = controller;
+    if (stageRef.current !== 'initial') return false;
+    setStage('processing');
+    const previewUrl = URL.createObjectURL(blob); setBgPreviewUrl(previewUrl); setBgLoading(true);
+    setBgProgressMsg('AI आपकी फोटो तैयार कर रहा है…'); setBgProgressPct(0);
+    const controller = new AbortController(); abortRef.current = controller;
+    const valid = () => id === generation.current && !controller.signal.aborted;
     (async () => {
       try {
-        const processed = await removeBg(
-          blob,
-          (stage, pct) => {
-            setBgProgressMsg(stage);
-            setBgProgressPct(pct);
-          },
-          controller.signal,
-        );
-        if (controller.signal.aborted) return;
-        toast.success("Background removed successfully! ✨");
-        setEditingImage(URL.createObjectURL(processed));
-        setCropStage("final");
-        toast("Adjust the final crop, then tap Done.");
-      } catch (err) {
-        if (err?.name === "AbortError" || controller.signal.aborted) return;
-        
-        toast.danger(
-          "Background removal शुरू नहीं हो पाया. इस photo को छोड़कर आगे बढ़ रहे हैं—इसे दोबारा select करके Retry करें.",
-        );
-        // Do not redisplay the same unchanged crop with another Done button.
-        // Skip only this failed item and continue the remaining queue; the
-        // original/background image is never accepted as a successful result.
-        setCropOpen(false);
-        setEditingImage(null);
-        setCropStage(null);
-        setActiveFile(null);
-        advanceQueue();
+        const result = await removeBg(blob, (message, pct) => {
+          if (valid()) { setBgProgressMsg(message); setBgProgressPct(pct); }
+        }, controller.signal);
+        if (!valid()) return;
+        setEditingImage(result); setStage('final'); toast('Adjust the final crop, then tap Done.');
+      } catch (error) {
+        if (!valid() || error?.name === 'AbortError') return;
+        setStage('initial'); toast.danger('Background removal failed. Please tap Done to retry.');
       } finally {
-        abortRef.current = null;
-        setBgLoading(false);
-        setBgProgressMsg("");
-        setBgProgressPct(0);
-        setBgPreviewUrl(null);
         URL.revokeObjectURL(previewUrl);
+        if (id === generation.current) {
+          abortRef.current = null; setBgLoading(false); setBgPreviewUrl(null); setBgProgressMsg(''); setBgProgressPct(0);
+        }
       }
     })();
     return false;
   };
-
-  const handleCropCancel = () => {
-    setCropOpen(false);
-    setEditingImage(null);
-    setCropStage(null);
-    setActiveFile(null);
-    advanceQueue();
-  };
+  const activeCropId = generation.current;
+  const handleCropCancel = cancelActiveProcessing;
 
   const colClass =
     { 3: "grid-cols-3", 4: "grid-cols-4" }[companyGridCols] || "grid-cols-4";
@@ -504,7 +441,7 @@ export default function MultiImagePicker({
       )}
 
       {/* Initial crop, then the final crop of the background-removed result. */}
-      {cropOpen && editingImage && !bgLoading && (
+      {cropOpen && editingImage && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/70 p-3">
           <div className="h-[min(560px,calc(100dvh-1.5rem))] w-full max-w-sm flex-shrink-0">
             <ImageEditorCanvas
@@ -515,7 +452,8 @@ export default function MultiImagePicker({
               // this is intentionally a no-op to avoid double-processing
               // the upload queue.
               setOpen={() => {}}
-              onDone={handleCropDone}
+              onDone={blob => handleCropDone(blob, activeCropId)}
+              processing={bgLoading}
               onCancel={handleCropCancel}
               enableEnhance={cropStage === "final"}
             />
