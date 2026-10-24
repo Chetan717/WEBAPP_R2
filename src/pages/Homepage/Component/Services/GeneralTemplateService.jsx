@@ -125,6 +125,8 @@ const normalizeTemplate = (data, id = data?.id) => ({
   Subtype: data?.Subtype,
   ShowCaseForm: data?.ShowCaseForm,
   serial: data?.serial,
+  createdAt: data?.createdAt,
+  subtypeAddedAt: data?.subtypeAddedAt || "",
 });
 const normalizeDoc = (doc) => normalizeTemplate(doc.data(), doc.id);
 
@@ -253,6 +255,11 @@ export const fetchGeneralTemplates = async (groupIndex, company) => {
         return {
           type,
           templates: [...mlmTemplates, ...generalTemplates],
+          newSubtypeDates: [
+            ...Object.values(homeGeneralCatalog?.subtypeDates?.[type] || {}),
+            ...Object.values(homeCompanyCatalog?.subtypeDates?.[type] || {}),
+            ...[...mlmTemplates, ...generalTemplates].map(item => item.subtypeAddedAt).filter(Boolean),
+          ],
           completeTemplates:
             completeMlm && Array.isArray(completeGeneralTemplates)
               ? [...mlmTemplates, ...completeGeneralTemplates]
@@ -261,7 +268,7 @@ export const fetchGeneralTemplates = async (groupIndex, company) => {
       }),
     );
 
-    const data = results.map(({ type, templates }) => ({ type, templates }));
+    const data = results.map(({ type, templates, newSubtypeDates }) => ({ type, templates, newSubtypeDates }));
 
     // A company switch may have cleared the cache while Firestore was still
     // responding. Never let that obsolete request repopulate the cache.

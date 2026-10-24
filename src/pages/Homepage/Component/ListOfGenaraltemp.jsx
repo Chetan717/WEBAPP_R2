@@ -1,3 +1,5 @@
+import PopupCampaignHost from "../../../components/Popups/PopupCampaignHost";
+import NewAddedBadge from "../../../components/Popups/NewAddedBadge";
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useGeneralData } from "../../../Context/GeneralContext";
 import { useNavigate } from "react-router";
@@ -26,7 +28,6 @@ import {
   preloadImage,
   markImageSeen,
   seenImages,
-  isNewTemplate,
 } from "./templateCacheUtils";
 import { hasMlmProfileInStorage } from "../../../utils/companyStorage";
 import { useSelectedCompany } from "../../../Context/SelectedCompanyContext";
@@ -272,7 +273,7 @@ const TEMPLATE_SECTION_ICON_BY_TYPE = {
   Leader_Quotes: Quote,
 };
 
-function TemplateSectionHeading({ type, label }) {
+function TemplateSectionHeading({ type, label, newSubtypeDates }) {
   const Icon = TEMPLATE_SECTION_ICON_BY_TYPE[type] || Sparkles;
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -285,6 +286,7 @@ function TemplateSectionHeading({ type, label }) {
       >
         {label}
       </h2>
+      <NewAddedBadge dates={newSubtypeDates} />
     </div>
   );
 }
@@ -393,17 +395,6 @@ const CheckIcon = ({ size = "sm" }) => {
   );
 };
 
-const NewBadge = () => (
-  <div className="absolute top-2 left-2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-accent shadow-md pointer-events-none">
-    <span className="relative flex h-1.5 w-1.5 shrink-0">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-70" />
-      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
-    </span>
-    <span className="text-[8px] font-bold text-white uppercase tracking-wide leading-none">
-      New
-    </span>
-  </div>
-);
 
 function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
   const { selectedCompany, refreshCompany } = useSelectedCompany();
@@ -693,7 +684,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                       <ImageIcon className="h-4 w-4" strokeWidth={1.6} />
                     </div>
                   )}
-                  {isNewTemplate(item.serial) ? <NewBadge /> : null}
+                  <NewAddedBadge date={item.subtypeAddedAt} className="absolute top-2 left-2 z-10" />
                 </div>
 
                 <div
@@ -766,6 +757,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <TemplateSectionHeading
                     type={group.type}
+                    newSubtypeDates={group.newSubtypeDates}
                     label={
                       displayName === "Training" ? "Seat Booking" : displayName
                     }
@@ -787,6 +779,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                   <h2 className="truncate text-lg font-display font-bold text-foreground">
                     Everyday Moments
                   </h2>
+                  <NewAddedBadge dates={everydayMomentCards.flatMap(entry => entry.group.newSubtypeDates || [])} />
                 </div>
                 <button
                   type="button"
@@ -826,7 +819,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                             <ImageIcon className="h-4 w-4" strokeWidth={1.6} />
                           </div>
                         )}
-                        {isNewTemplate(item.serial) ? <NewBadge /> : null}
+                        <NewAddedBadge date={item.subtypeAddedAt} className="absolute top-2 left-2 z-10" />
                       </div>
                       <div className="flex h-[27px] items-center px-2">
                         <AutoScrollCardLabel label={label} />
@@ -839,6 +832,8 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
           )}
         </div>
       )}
+
+      <PopupCampaignHost onTemplateSelect={handleImagePress} />
 
       {designationModalPending && (
         <DesignationSelectModal
