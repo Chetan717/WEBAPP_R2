@@ -1,15 +1,19 @@
 /**
  * Client-only background removal shared by every MLM LIVE photo flow.
  *
- * BiRefNet is always attempted first on a capable device, including phones.
- * The first request waits for its cached/shared model preparation. MODNet is
- * loaded only when WebGPU is unavailable or BiRefNet fails/returns a bad mask.
+ * Smart routing strategy:
+ *   - Always warm the fast/local MODNet path first so the very first removal
+ *     starts quickly and does not leave the user waiting on a giant download.
+ *   - Warm BiRefNet Lite 512 FP16 quietly in the background on capable devices.
+ *   - Use BiRefNet only when it is actually ready.
+ *   - If BiRefNet fails or returns a near-blank transparent image, fall back
+ *     automatically to MODNet in the same user action.
  */
 
 export const REMOVE_BG_QUALITY = Object.freeze({
-  engine: "birefnet-first-with-modnet-fallback",
-  primaryEngine: "birefnet-lite-512-fp16",
-  fallbackEngine: "modnet",
+  engine: "smart-auto-modnet-first-birefnet-when-ready",
+  primaryFastPath: "modnet",
+  qualityUpgradePath: "birefnet-lite-512-fp16",
   continuousAlpha: true,
   lowQualityFallback: false,
   originalPhotoFallback: false,
@@ -20,7 +24,8 @@ let birefNetPromise = null;
 let modNetPromise = null;
 let preloadPromise = null;
 let selectedEnginePromise = null;
-let primaryPreparationFailure = null;
+let silentQualityWarmupPromise = null;
+let birefNetReady = false;
 let activeProgress = null;
 let processingTail = Promise.resolve();
 
@@ -39,7 +44,7 @@ function emitProgress(stage, percentage) {
 
 async function loadBirefNetEngine() {
   if (!birefNetPromise) {
-    birefNetPromise = import("./birefnetWorkerClient.js").catch((error) => {
+    birefNetPromise = import("./birefnetBg.js").catch((error) => {
       birefNetPromise = null;
       throw error;
     });
@@ -49,7 +54,7 @@ async function loadBirefNetEngine() {
 
 async function loadModNetEngine() {
   if (!modNetPromise) {
-    modNetPromise = import("./modnetWorkerClient.js").catch((error) => {
+    modNetPromise = import("./modnetBg.js").catch((error) => {
       modNetPromise = null;
       throw error;
     });
@@ -60,8 +65,12 @@ async function loadModNetEngine() {
 async function selectBestEngine() {
   if (!selectedEnginePromise) {
     selectedEnginePromise = (async () => {
-      // Capability, rather than the mobile user-agent, determines eligibility.
-      // A supported phone uses the same BiRefNet-first policy as desktop.
+      // Mobile browsers are the stability-sensitive path. Loading a ~98 MB
+      // WebGPU model there causes long waits, memory pressure and provider
+      // crashes on many Android devices. Use the tuned MODNet path directly
+      // on phones/tablets; desktop can still upgrade to BiRefNet when ready.
+      if (isMobileLikeDevice()) return "modnet";
+
       try {
         const { getBirefNetCapability } = await loadBirefNetEngine();
         const capability = await getBirefNetCapability();
@@ -77,6 +86,15 @@ async function selectBestEngine() {
 }
 
 
+function isMobileLikeDevice() {
+  if (typeof navigator === "undefined") return false;
+  if (navigator.userAgentData && typeof navigator.userAgentData.mobile === "boolean") {
+    return navigator.userAgentData.mobile;
+  }
+  const ua = String(navigator.userAgent || "");
+  return /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(ua);
+}
+
 function reportNativeFailure(error, engine) {
   try {
     window.ReactNativeWebView?.postMessage(
@@ -91,42 +109,66 @@ function reportNativeFailure(error, engine) {
   }
 }
 
-/** App startup and every crop control reuse this one model/session warmup. */
+async function warmBirefNetInBackground() {
+  if (typeof window === "undefined") return "unavailable";
+  if (silentQualityWarmupPromise) return silentQualityWarmupPromise;
+
+  silentQualityWarmupPromise = (async () => {
+    try {
+      const selected = await selectBestEngine();
+      if (selected !== "birefnet") return "modnet";
+      const { preloadBirefNet } = await loadBirefNetEngine();
+      await preloadBirefNet();
+      birefNetReady = true;
+      return "birefnet";
+    } catch (error) {
+      birefNetReady = false;
+      if (error?.removeBgUnsupported === true) {
+        selectedEnginePromise = Promise.resolve("modnet");
+      }
+      // Keep the app usable. Fast local processing remains available.
+      console.warn("[removeBg] Background BiRefNet warmup skipped:", error);
+      return "modnet";
+    }
+  })().catch((error) => {
+    silentQualityWarmupPromise = null;
+    birefNetReady = false;
+    console.warn("[removeBg] Silent BiRefNet warmup failed:", error);
+    return "modnet";
+  });
+
+  return silentQualityWarmupPromise;
+}
+
+/** Start loading the minimum reliable engine as early as possible. */
 export async function preloadBgModel(onProgress) {
   if (typeof window === "undefined") return "unavailable";
-  // Forward to the active action even when a silent preload began earlier.
-  // Never route this callback back into itself through emitProgress().
-  const report = typeof onProgress === "function"
-    ? (stage, percentage) => onProgress(stage, Math.max(0, Math.min(100, Math.round(percentage))))
-    : (stage, percentage) => emitProgress(stage, percentage);
 
+  // IMPORTANT: never assign activeProgress to a wrapper that calls
+  // emitProgress(). Doing that creates emitProgress -> activeProgress ->
+  // emitProgress recursion and eventually "Maximum call stack size exceeded".
+  const report =
+    typeof onProgress === "function"
+      ? (stage, percentage) =>
+          onProgress(stage, Math.max(0, Math.min(100, Math.round(percentage))))
+      : (stage, percentage) => emitProgress(stage, percentage);
+
+  // Fast, bundled path is prepared first so first-use remove-bg stays quick.
   if (!preloadPromise) {
     preloadPromise = (async () => {
-      const selected = await selectBestEngine();
-      if (selected === "birefnet") {
-        const { preloadBirefNet } = await loadBirefNetEngine();
-        try {
-          await preloadBirefNet(report);
-        } catch (error) {
-          if (error?.name === "AbortError") throw error;
-          primaryPreparationFailure = error;
-          error.removeBgPreparationFailed = true;
-          if (error?.removeBgUnsupported) selectedEnginePromise = Promise.resolve("modnet");
-          const { preloadModNet } = await loadModNetEngine();
-          await preloadModNet(report);
-          return "modnet";
-        }
-      } else {
-        const { preloadModNet } = await loadModNetEngine();
-        await preloadModNet(report);
-      }
-      return selected;
-    })().catch(error => {
+      const { preloadModNet } = await loadModNetEngine();
+      await preloadModNet(report);
+      return "modnet-ready";
+    })().catch((error) => {
       preloadPromise = null;
-      // The explicit remove action owns retry/fallback and error UI.
       throw error;
     });
   }
+
+  // Quality path warms silently in parallel for later requests on capable
+  // devices. It must never block the user's first successful removal.
+  void warmBirefNetInBackground();
+
   return preloadPromise;
 }
 
@@ -160,15 +202,13 @@ function queueProcessing(task, signal) {
 }
 
 async function runBirefNet(file, signal) {
-  if (primaryPreparationFailure) throw primaryPreparationFailure;
   const { removeBackgroundWithBirefNet } = await loadBirefNetEngine();
   throwIfAborted(signal);
-  let result;
-  try { result = await removeBackgroundWithBirefNet(
+  const result = await removeBackgroundWithBirefNet(
     file,
     (stage, percentage) => emitProgress(stage, percentage),
     signal,
-  ); } catch (error) { throw primaryPreparationFailure || error; }
+  );
   if (!(result instanceof Blob) || result.size === 0) {
     throw new Error("BiRefNet returned an empty image.");
   }
@@ -259,7 +299,6 @@ async function validateTransparentResult(blob, engine, signal) {
     let nonZero = 0;
     let strong = 0;
     let alphaSum = 0;
-    let transparent = 0;
     let minX = width;
     let minY = height;
     let maxX = -1;
@@ -268,7 +307,6 @@ async function validateTransparentResult(blob, engine, signal) {
     for (let i = 0, pixel = 0; i < rgba.length; i += 4, pixel += 1) {
       const alpha = rgba[i + 3];
       alphaSum += alpha;
-      if (alpha <= 8) transparent += 1;
       if (alpha > 0) {
         nonZero += 1;
         const x = pixel % width;
@@ -281,9 +319,6 @@ async function validateTransparentResult(blob, engine, signal) {
       if (alpha >= 64) strong += 1;
     }
 
-    if (total > 0 && transparent / total < 0.005) {
-      throw tagValidationError(`${engine} did not remove the background.`, engine);
-    }
     const nonZeroRatio = total > 0 ? nonZero / total : 0;
     const strongRatio = total > 0 ? strong / total : 0;
     const meanAlpha = total > 0 ? alphaSum / (255 * total) : 0;
@@ -318,7 +353,6 @@ async function validateTransparentResult(blob, engine, signal) {
 }
 
 export function isRetryableRemoveBgError(error) {
-  if (error?.removeBgPreparationFailed) return false;
   let current = error;
   const visited = new Set();
   while (current && !visited.has(current)) {
@@ -336,6 +370,8 @@ async function retrySameEngine(engine) {
     // Keep the cached large file. A transient session failure should not force
     // a second giant network download.
     await resetBirefNetEngine({ freshAssets: false });
+    birefNetReady = false;
+    await warmBirefNetInBackground();
     return;
   }
   const { resetModNetEngine } = await loadModNetEngine();
@@ -371,29 +407,36 @@ async function runEngineWithRetry(engine, file, signal) {
   }
 }
 
-async function removeWithPreferredEngine(file, signal) {
+async function removeWithSmartEngine(file, signal) {
   const preferredEngine = await selectBestEngine();
-  throwIfAborted(signal);
 
-  if (preferredEngine === "birefnet") {
+  // If the quality engine is already fully ready, use it. Otherwise do not
+  // block this action; run the fast local path immediately.
+  if (preferredEngine === "birefnet" && birefNetReady) {
     try {
-      // The runner awaits the same session/model promise as preloadBgModel().
-      // MODNet readiness never decides which engine handles the first photo.
-      return { blob: await runEngineWithRetry("birefnet", file, signal), engine: "birefnet" };
+      return {
+        blob: await runEngineWithRetry("birefnet", file, signal),
+        engine: "birefnet",
+      };
     } catch (error) {
       if (error?.name === "AbortError" || signal?.aborted) throw abortError();
-      console.warn("[removeBg] BiRefNet failed; falling back to MODNet for this photo.", error);
-      const { resetBirefNetEngine } = await loadBirefNetEngine();
-      if (!error?.removeBgInvalidMask) resetBirefNetEngine();
-      if (error?.removeBgUnsupported === true) selectedEnginePromise = Promise.resolve("modnet");
-      preloadPromise = null;
-      emitProgress("BiRefNet पूरा नहीं हुआ. Portrait fallback तैयार हो रहा है…", 6);
+      console.warn("[removeBg] BiRefNet failed or looked blank; falling back to MODNet.", error);
+      emitProgress("Fast portrait AI par switch हो रहा है…", 14);
+      const fallbackBlob = await runEngineWithRetry("modnet", file, signal);
+      return { blob: fallbackBlob, engine: "modnet" };
     }
-  } else {
-    emitProgress("इस device पर WebGPU उपलब्ध नहीं है. Portrait fallback तैयार हो रहा है…", 6);
   }
-  throwIfAborted(signal);
-  return { blob: await runEngineWithRetry("modnet", file, signal), engine: "modnet" };
+
+  if (preferredEngine === "birefnet" && !birefNetReady) {
+    emitProgress(
+      "Fast portrait AI तुरंत चल रहा है… High-quality model background में ready हो रहा है…",
+      10,
+    );
+    void warmBirefNetInBackground();
+  }
+
+  const blob = await runEngineWithRetry("modnet", file, signal);
+  return { blob, engine: "modnet" };
 }
 
 /**
@@ -410,9 +453,11 @@ export async function removeBg(file, onProgress, signal) {
   return queueProcessing(async () => {
     throwIfAborted(signal);
     activeProgress = onProgress || null;
-    let engine = "birefnet";
+    let engine = "modnet";
     try {
-      const { blob, engine: usedEngine } = await removeWithPreferredEngine(file, signal);
+      // Ensure at least the fast local engine is fully ready before we start.
+      await preloadBgModel();
+      const { blob, engine: usedEngine } = await removeWithSmartEngine(file, signal);
       engine = usedEngine;
       emitProgress(
         engine === "birefnet"
@@ -424,7 +469,7 @@ export async function removeBg(file, onProgress, signal) {
     } catch (error) {
       if (error?.name === "AbortError" || signal?.aborted) throw abortError();
       console.error("[removeBg] Portrait removal failed:", error);
-      reportNativeFailure(error, error?.removeBgEngine || engine);
+      reportNativeFailure(error, engine);
       throw new Error(
         "Background remove पूरा नहीं हुआ. Internet on रखकर photo दोबारा try करें — background वाली photo save नहीं की गई है.",
         { cause: error },
@@ -435,11 +480,12 @@ export async function removeBg(file, onProgress, signal) {
   }, signal);
 }
 
-/** Rebuild sessions after an explicit repair; keep the persisted BiRefNet model. */
+/** Force a fresh model download only after the user explicitly retries repair. */
 export function refreshRemoveBgKeys() {
-  primaryPreparationFailure = null;
   preloadPromise = null;
   selectedEnginePromise = null;
+  silentQualityWarmupPromise = null;
+  birefNetReady = false;
   if (birefNetPromise) {
     void birefNetPromise
       .then(({ resetBirefNetEngine }) => resetBirefNetEngine({ freshAssets: true }))

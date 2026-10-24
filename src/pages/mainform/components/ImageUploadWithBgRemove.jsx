@@ -4,8 +4,6 @@ import { preloadBgModel, removeBg } from "../utils/removeBg";
 import { validateUploadFile } from "../../../lib/fileValidation";
 import RemoveBgLoadingOverlay from "./RemoveBgLoadingOverlay";
 
-const photoOwners = new WeakMap();
-
 export default function ImageUploadWithBgRemove({
   onImageReady,
   setEditingImage,
@@ -71,85 +69,189 @@ export default function ImageUploadWithBgRemove({
     onProcessingChange?.(next);
   };
 
-  const inputJobRef = useRef(null);
-  const [src, setPreviewSrc] = useState(null);
-  useEffect(() => {
-    const url = currentImage instanceof Blob ? URL.createObjectURL(currentImage) : currentImage;
-    setPreviewSrc(url);
-    return () => { if (currentImage instanceof Blob && url) URL.revokeObjectURL(url); };
-  }, [currentImage]);
-  const owns = job => inputJobRef.current === job && photoOwners.get(setEditingImage) === job;
-  const cancelRemoveBg = (job = inputJobRef.current) => {
-    if (!owns(job)) return;
-    job.controller?.abort(); photoOwners.delete(setEditingImage);
-    processingRef.current = false; abortRef.current = null;
-    setLoad(false); setProcessingPreview(null); setProgressPct(0);
-    publishProcessing({ active: false, previewUrl: null, progressMessage: '', progressPct: 0, onCancel: null });
-    setEditingImage(null); setOnImageDone(null); setEnhanceEnabled?.(false); setOpen(false);
-    toast('Background removal cancelled.');
+  const cancelRemoveBg = () => {
+    processingIdRef.current += 1;
+    processingRef.current = false;
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setLoad(false);
+    setProgressMsg("Please wait…");
+    setProgressPct(0);
+    setProcessingPreview(null);
+    publishProcessing({
+      active: false,
+      previewUrl: null,
+      progressMessage: "",
+      progressPct: 0,
+      onCancel: null,
+    });
+    setEditingImage(null);
+    setOnImageDone(null);
+    setEnhanceEnabled?.(false);
+    setOpen(false);
+    toast("Background removal cancelled.");
   };
-  const openFinalCrop = (image, canEnhance, job) => {
-    if (!owns(job)) return;
-    let accepted = false;
-    setEnhanceEnabled?.(canEnhance); setEditingImage(image);
-    setOnImageDone(() => finalBlob => {
-      if (accepted || !owns(job)) return false;
-      accepted = true; onImageReady(finalBlob);
-      setEnhanceEnabled?.(false); setEditingImage(null);
+
+  const openFinalCrop = (image, canEnhance = false) => {
+    const preview = image instanceof Blob ? URL.createObjectURL(image) : image;
+    setEnhanceEnabled?.(canEnhance);
+    setEditingImage(preview);
+    setOnImageDone(() => (finalBlob) => {
+      onImageReady(finalBlob);
+      setEnhanceEnabled?.(false);
+      setEditingImage(null);
       return true;
     });
     setOpen(true);
   };
-  const removeBackgroundAfterCrop = (croppedBlob, job) => {
-    if (!croppedBlob || !owns(job) || job.busy) return false;
-    job.busy = true; processingRef.current = true;
-    const controller = new AbortController(); job.controller = controller; abortRef.current = controller;
+
+  const removeBackgroundAfterCrop = (croppedBlob) => {
+    if (!croppedBlob) return true;
+    if (processingRef.current) return false;
+
+    processingRef.current = true;
+    const processingId = processingIdRef.current + 1;
+    processingIdRef.current = processingId;
     const previewUrl = URL.createObjectURL(croppedBlob);
-    setProcessingPreview(previewUrl); setLoad(true); setProgressMsg('AI आपकी फोटो तैयार कर रहा है…'); setProgressPct(0);
-    const publish = (stage, pct) => {
-      if (!owns(job) || controller.signal.aborted) return;
-      setProgressMsg(stage); setProgressPct(pct);
-      publishProcessing({ active: true, previewUrl, progressMessage: stage, progressPct: pct, onCancel: () => cancelRemoveBg(job) });
-    };
-    publish('AI आपकी फोटो तैयार कर रहा है…', 0);
-    // Retain the same crop surface behind the overlay. A source swap starts the
-    // final crop without closing/reopening either the form or modal.
+    setProcessingPreview(previewUrl);
+    setLoad(true);
+    setProgressMsg("AI आपकी फोटो तैयार कर रहा है…");
+    setProgressPct(0);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    publishProcessing({
+      active: true,
+      previewUrl,
+      progressMessage: "AI आपकी फोटो तैयार कर रहा है…",
+      progressPct: 0,
+      onCancel: cancelRemoveBg,
+    });
+
+    // The first crop is finished. Close that editor while AI is running so a
+    // second tap cannot enqueue the same photo again. MeetingForm closes its
+    // image-picker modal before this callback, so its parent-level loader keeps
+    // the processing state visible even if this uploader is temporarily gone.
+    setEditingImage(null);
+    setOpen(false);
+
     (async () => {
-      let result;
+      let finalImage = null;
+      let completed = false;
       try {
-        result = await removeBg(croppedBlob, publish, controller.signal);
-      } catch (error) {
-        if (owns(job) && !controller.signal.aborted && error?.name !== 'AbortError') {
-          toast.danger('Background removal failed. Please tap Done to retry.');
-        }
+        const processed = await removeBg(
+          croppedBlob,
+          (stage, pct) => {
+            if (processingId !== processingIdRef.current) return;
+            setProgressMsg(stage);
+            setProgressPct(pct);
+            publishProcessing({
+              active: true,
+              previewUrl,
+              progressMessage: stage,
+              progressPct: pct,
+              onCancel: cancelRemoveBg,
+            });
+          },
+          controller.signal,
+        );
+        if (
+          controller.signal.aborted ||
+          processingId !== processingIdRef.current
+        ) return;
+        finalImage = processed;
+        completed = true;
+        toast.success("Background removed successfully! ✨");
+      } catch (err) {
+        if (
+          err?.name === "AbortError" ||
+          controller.signal.aborted ||
+          processingId !== processingIdRef.current
+        ) return;
+        
+        console.error("[removeBg] Image processing failed:", err, err?.cause);
+        toast.danger(
+          "Background removal शुरू नहीं हो पाया. Photo दोबारा select करके Retry करें.",
+        );
+
+        // Never return the unchanged crop to another Done button. That looked
+        // like a successful result and trapped users in an endless retry loop
+        // whenever the AI runtime could not start. Exit cleanly to the form;
+        // the original/background photo is still never accepted as output.
+        setEnhanceEnabled?.(false);
+        setEditingImage(null);
+        setOnImageDone(null);
+        setOpen(false);
       } finally {
-        URL.revokeObjectURL(previewUrl);
-        if (owns(job)) {
-          job.busy = false; job.controller = null; processingRef.current = false; abortRef.current = null;
-          setLoad(false); setProgressMsg('Please wait…'); setProgressPct(0); setProcessingPreview(null);
-          publishProcessing({ active: false, previewUrl: null, progressMessage: '', progressPct: 0, onCancel: null });
+        if (processingId === processingIdRef.current) {
+          abortRef.current = null;
+          processingRef.current = false;
+          setLoad(false);
+          setProgressMsg("Please wait…");
+          setProgressPct(0);
+          setProcessingPreview(null);
+          publishProcessing({
+            active: false,
+            previewUrl: null,
+            progressMessage: "",
+            progressPct: 0,
+            onCancel: null,
+          });
         }
+        URL.revokeObjectURL(previewUrl);
       }
-      if (result && owns(job) && !controller.signal.aborted) {
-        openFinalCrop(result, true, job);
-        toast('Adjust the final crop, then tap Done.');
+
+      if (
+        completed &&
+        !controller.signal.aborted &&
+        processingId === processingIdRef.current
+      ) {
+        openFinalCrop(finalImage, true);
+        toast("Adjust the final crop, then tap Done.");
       }
     })();
+
+    // The callback contract remains false for parents that decide whether to
+    // close the current editor. This flow already closed it above and will open
+    // a fresh final editor only after AI processing completes.
     return false;
   };
-  const handleFile = file => {
+
+  const handleFile = (file) => {
     if (!file) return;
-    const validation = validateUploadFile(file, 'image');
-    if (!validation.valid) { toast.danger(validation.error || 'Invalid image file.'); return; }
-    photoOwners.get(setEditingImage)?.controller?.abort();
-    const job = { busy: false, controller: null };
-    photoOwners.set(setEditingImage, job); inputJobRef.current = job;
-    if (typeof setEditingType === 'function') setEditingType(type);
-    if (skipBackgroundRemoval) { openFinalCrop(file, false, job); return; }
-    void preloadBgModel().catch(() => {});
-    setEnhanceEnabled?.(false); setEditingImage(file);
-    setOnImageDone(() => blob => removeBackgroundAfterCrop(blob, job)); setOpen(true);
+    const result = validateUploadFile(file, "image");
+    if (!result.valid) {
+      toast.danger(result.error || "Invalid image file.");
+      return;
+    }
+    if (typeof setEditingType === "function") setEditingType(type);
+
+    // Start downloading/initialising the free on-device model while the user
+    // adjusts the first crop. removeBg() reuses this promise, so Done feels much
+    // faster without uploading the selected photo anywhere.
+    if (!skipBackgroundRemoval) {
+      void preloadBgModel().catch(() => {
+        // removeBg() performs a same-quality clean retry and shows any error.
+      });
+    }
+
+    // Achievement images keep their existing one-crop flow and background.
+    if (skipBackgroundRemoval) {
+      openFinalCrop(file, false);
+      return;
+    }
+
+    // Standard photo flow: crop the original first. Its Done callback removes
+    // the background and reopens the result for a second/final crop.
+    const preview = URL.createObjectURL(file);
+    setEnhanceEnabled?.(false);
+    setEditingImage(preview);
+    setOnImageDone(() => removeBackgroundAfterCrop);
+    setOpen(true);
   };
+
+  const src = currentImage instanceof Blob ? URL.createObjectURL(currentImage) : currentImage;
 
   return (
     <div data-guide={guideTarget}>
@@ -235,7 +337,7 @@ export default function ImageUploadWithBgRemove({
           previewUrl={processingPreview}
           progressMessage={`${progressMsg}${dots}`}
           progressPct={progressPct}
-          onCancel={() => cancelRemoveBg()}
+          onCancel={cancelRemoveBg}
         />
       )}
     </div>

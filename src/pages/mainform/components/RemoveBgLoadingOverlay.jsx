@@ -16,6 +16,7 @@ export default function RemoveBgLoadingOverlay({
   zIndex = "z-[99999]",
 }) {
   const [messageIndex, setMessageIndex] = useState(0);
+  const [displayPct, setDisplayPct] = useState(1);
 
   useEffect(() => {
     const id = window.setInterval(
@@ -25,9 +26,26 @@ export default function RemoveBgLoadingOverlay({
     return () => window.clearInterval(id);
   }, []);
 
-  // Show engine/download progress. A timer must not claim 99% while the
-  // first BiRefNet model is still being fetched on a slow connection.
-  const safePct = Math.max(0, Math.min(100, Math.round(Number(progressPct) || 0)));
+  useEffect(() => {
+    if (progressPct >= 100) {
+      setDisplayPct(100);
+      return undefined;
+    }
+
+    // The engine reports broad phases (often staying at 82/88 during the
+    // longest inference). Drive the visible 1–99 counter smoothly by elapsed
+    // time so users can always see that work is continuing.
+    const startedAt = Date.now();
+    setDisplayPct(1);
+    const id = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const timeBasedPct = Math.min(99, 1 + Math.floor(elapsed / 350));
+      setDisplayPct((current) => Math.max(current, timeBasedPct));
+    }, 350);
+    return () => window.clearInterval(id);
+  }, [progressPct >= 100]);
+
+  const safePct = Math.max(1, Math.min(100, Math.round(displayPct)));
   const steps = [
     { at: 1, label: "Prepare" },
     { at: 20, label: "Detect" },

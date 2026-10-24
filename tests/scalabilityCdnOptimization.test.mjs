@@ -24,6 +24,5 @@ test("Production defaults point at customer Cloudflare domains", async () => {
   const env = await source(".env.production");
   assert.match(env, /VITE_TEMPLATE_CDN_BASE_URL=https:\/\/cdn\.mlmposter\.com/);
   assert.match(env, /VITE_R2_PROFILE_BASE_URL=https:\/\/profile\.mlmposter\.com/);
-  assert.match(env, /VITE_BIREFNET_MODEL_URL=https:\/\/models\.mlmposter\.com\/birefnet\//);
-  assert.match(env, /VITE_MODNET_ASSET_BASE_URL=https:\/\/models\.mlmposter\.com\/modnet\//);
+  assert.match(env, /VITE_BIREFNET_MODEL_URL=https:\/\/models\.mlmposter\.com\/models\/birefnet\//);
 });

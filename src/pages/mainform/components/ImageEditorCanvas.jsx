@@ -142,17 +142,9 @@ export default function ImageEditorCanvas({
   setOpen,
   editingType,
   enableEnhance = false,
-  processing = false,
 }) {
-  const currentSrc = src;
+  const [currentSrc, setCurrentSrc] = useState(src);
   const [isDoing, setIsDoing] = useState(false);
-  const sourceRevision = useRef(0);
-  useEffect(() => {
-    sourceRevision.current += 1;
-    clearInterval(progressTimerRef.current);
-    isDoingRef.current = false;
-    return () => { sourceRevision.current += 1; clearInterval(progressTimerRef.current); };
-  }, [src]);
   const [isImageReady, setIsImageReady] = useState(false);
   const [encodeProgress, setEncodeProgress] = useState(0);
   const [zoom, setZoom] = useState(100);
@@ -590,7 +582,9 @@ export default function ImageEditorCanvas({
     setTab(enableEnhance ? "enhance" : "crop");
   }, [enableEnhance, currentSrc]);
 
-
+  useEffect(() => {
+    setCurrentSrc(src);
+  }, [src]);
 
   useEffect(
     () => () => {
@@ -708,8 +702,7 @@ export default function ImageEditorCanvas({
 
   // ── Export ────────────────────────────────────────────────────
   const handleDone = () => {
-    if (isDoingRef.current || processing) return;
-    const revision = sourceRevision.current;
+    if (isDoingRef.current) return;
     const img = imgRef.current;
     if (!img) {
       toast("Photo is still loading. Please wait a moment.");
@@ -790,7 +783,6 @@ export default function ImageEditorCanvas({
       exportType,
       exportType === "image/webp" ? 0.92 : undefined,
     ).then((blob) => {
-        if (revision !== sourceRevision.current) return;
         clearInterval(progressTimerRef.current);
         if (!blob) {
           // A few Android WebViews occasionally return null from canvas.toBlob.
@@ -836,7 +828,6 @@ export default function ImageEditorCanvas({
           setEncodeProgress(0);
         }
       }).catch((error) => {
-        if (revision !== sourceRevision.current) return;
         clearInterval(progressTimerRef.current);
         console.error("[ImageEditorCanvas] Crop encoding failed:", error);
         isDoingRef.current = false;
@@ -847,8 +838,6 @@ export default function ImageEditorCanvas({
   };
 
   const onCancelClick = () => {
-    sourceRevision.current += 1;
-    clearInterval(progressTimerRef.current);
     setOpen(false);
     onCancel();
   };
@@ -880,8 +869,6 @@ export default function ImageEditorCanvas({
     <div
       ref={containerRef}
       data-image-editor-open="true"
-      aria-hidden={processing || undefined}
-      inert={processing || undefined}
       className="rounded-none"
       style={{
         display: "flex",
@@ -907,7 +894,6 @@ export default function ImageEditorCanvas({
         }}
       >
         <button
-          aria-label="Cancel"
           onClick={onCancelClick}
           style={{
             background: "none",
@@ -933,7 +919,7 @@ export default function ImageEditorCanvas({
         </div>
         <button
           type="button"
-          disabled={processing || isDoing || !isImageReady}
+          disabled={isDoing || !isImageReady}
           onClick={handleDone}
           style={{
             position: "relative",

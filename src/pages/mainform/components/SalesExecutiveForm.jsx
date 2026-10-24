@@ -1505,7 +1505,6 @@ export default function SalesExecutiveForm() {
         <div className="fixed inset-0 z-[99998] h-[100dvh] w-full overflow-hidden bg-[#181818]">
           <ImageEditorCanvas
             src={editingImage}
-                processing={removeBgProcessing.active}
             onDone={(blob) => {
               const shouldClose = onImageDone?.(blob) !== false;
               if (shouldClose) setEditingImage(null);

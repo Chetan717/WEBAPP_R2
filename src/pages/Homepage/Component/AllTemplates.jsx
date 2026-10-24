@@ -1,4 +1,3 @@
-import NewAddedBadge from "../../../components/Popups/NewAddedBadge";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { ArrowLeft, Check, ChevronRight, Compass } from "lucide-react";
@@ -303,7 +302,6 @@ function SubtypeChoiceCard({ section, parentType, onOpenGrid }) {
       aria-label={`View all ${subtypeLabel} designs`}
       className="relative aspect-square w-[118px] shrink-0 snap-start overflow-hidden rounded-[16px] border border-[#E5EAF2] bg-muted/40 text-left shadow-[0_2px_10px_rgba(28,54,92,0.04)] card-press dark:border-border"
     >
-      <NewAddedBadge dates={section.items.map(graphic => graphic._template?.subtypeAddedAt)} className="absolute top-2 left-2 z-20" />
       <ShowcaseImage
         src={preview}
         alt={subtypeLabel}

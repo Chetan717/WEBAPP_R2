@@ -780,7 +780,6 @@ export default function MeetingForm({ onPreviewChange }) {
             <Modal.Dialog className="w-full max-w-3xl bg-transparent shadow-none">
               <ImageEditorCanvas
                 src={editingImage}
-                processing={removeBgProcessing.active}
                 onDone={(blob) => onImageDone && onImageDone(blob)}
                 onCancel={() => {
                   setOpen(false);
