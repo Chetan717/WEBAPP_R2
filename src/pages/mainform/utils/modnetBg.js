@@ -64,7 +64,7 @@ function localAssetUrl(fileName) {
 }
 
 function remoteModelUrl() {
-  const configuredBase = String(import.meta.env.VITE_MODNET_ASSET_BASE_URL || "").trim();
+  const configuredBase = String(import.meta.env.VITE_MODNET_ASSET_BASE_URL || "https://models.mlmposter.com/modnet/model.onnx").trim();
   if (!configuredBase) return "";
   return versionedAssetUrl(`${configuredBase.replace(/\/+$/, "")}/`, "modnet.onnx");
 }

@@ -11,7 +11,7 @@ const MODEL_SIZE = 512;
 const MODEL_CACHE_NAME = "mlmlive-ai-models-v3";
 const MODEL_CACHE_VERSION = "birefnet-lite-512-fp16-2026-10-09-v1";
 const DEFAULT_MODEL_URL =
-  "https://models.mlmposter.com/models/birefnet/model_fp16.onnx";
+  "https://models.mlmposter.com/birefnet/model_fp16.onnx";
 const MAX_OUTPUT_SIDE = 3072;
 const MAX_OUTPUT_PIXELS = 6_500_000;
 
