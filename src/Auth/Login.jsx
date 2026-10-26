@@ -213,7 +213,7 @@ export function Login() {
               Log in to your account
             </h1>
             <p className="mt-1.5 max-w-[360px] text-[15px] leading-5 text-muted-foreground">
-              10,000+ ready designs with your photo and details already on them
+              50,000+ ready designs with your photo and details already on them
             </p>
 
             <form

@@ -94,3 +94,20 @@ export function groupEverydayMomentItemsBySubtype(items = []) {
 
   return Array.from(groups.values());
 }
+
+export function mixEverydayMomentItems(items = []) {
+  const groups = groupEverydayMomentItemsBySubtype(items);
+  const mixed = [];
+  const largestGroup = groups.reduce(
+    (largest, group) => Math.max(largest, group.items.length),
+    0,
+  );
+
+  for (let offset = 0; offset < largestGroup; offset += 3) {
+    for (const group of groups) {
+      mixed.push(...group.items.slice(offset, offset + 3));
+    }
+  }
+
+  return mixed;
+}

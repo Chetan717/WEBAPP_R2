@@ -1,6 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import VirtualTemplateGrid from "./VirtualTemplateGrid";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { db } from "@firebase-config";
 import { COLLECTIONS } from "../../../collections";
 import { PAGE_REFRESH_EVENT } from "../../../utils/pageRefresh";
@@ -28,10 +41,10 @@ import {
 } from "../../../utils/editorTemplateList";
 import {
   filterEverydayMomentItems,
-  getEverydayMomentSubtypeKey,
   getEverydayMomentSubtypeOptions,
   groupEverydayMomentItemsBySubtype,
   isEverydayMomentType,
+  mixEverydayMomentItems,
 } from "../../../utils/everydayMoments";
 
 const BATCH_SIZE = 16;
@@ -47,6 +60,7 @@ function getCanvasAssetUrl(item) {
 
 function preloadCanvasAsset(item) {
   const src = getCanvasAssetUrl(item);
+
   if (
     !src ||
     item?.backgroundVideoUrl ||
@@ -57,13 +71,16 @@ function preloadCanvasAsset(item) {
   }
 
   _preloadingCanvasAssets.add(src);
+
   const image = new window.Image();
   image.crossOrigin = "anonymous";
   image.decoding = "async";
+
   image.onload = () => {
     _preloadingCanvasAssets.delete(src);
     _preloadedCanvasAssets.add(src);
   };
+
   image.onerror = () => _preloadingCanvasAssets.delete(src);
   image.src = src;
 }
@@ -71,7 +88,11 @@ function preloadCanvasAsset(item) {
 function readEditorTemplateSeed({ type, subType, mainType, companyId }) {
   try {
     const raw = sessionStorage.getItem(EDITOR_TEMPLATE_SEED_KEY);
-    if (!raw) return { items: [], selectedGraphicKey: "" };
+
+    if (!raw) {
+      return { items: [], selectedGraphicKey: "" };
+    }
+
     const seed = JSON.parse(raw);
     const sameSelection = isEditorTemplateSeedForSelection(seed, {
       type,
@@ -107,11 +128,14 @@ const SHIMMER_STYLE = `@keyframes shimmerSlide {
   0%   { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }`;
+
 const _shimmerStyleEl = (() => {
   if (typeof document === "undefined") return null;
+
   const el = document.createElement("style");
   el.textContent = SHIMMER_STYLE;
   document.head.appendChild(el);
+
   return el;
 })();
 
@@ -122,10 +146,12 @@ function getSelType() {
     return {};
   }
 }
+
 function getMeetingHostMode() {
   try {
     const savedMeeting = localStorage.getItem("Meeting");
     const meetingData = savedMeeting ? JSON.parse(savedMeeting) : null;
+
     return meetingData?.hostMode || "";
   } catch {
     return "";
@@ -142,6 +168,7 @@ function getCloseFilter() {
 
 function cleanItem(item) {
   if (!item) return null;
+
   const { _template, ...clean } = item;
   return clean;
 }
@@ -166,7 +193,9 @@ const LazyImage = React.memo(function LazyImage({ src, alt }) {
 
   useEffect(() => {
     const el = wrapperRef.current;
+
     if (!el) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -176,7 +205,9 @@ const LazyImage = React.memo(function LazyImage({ src, alt }) {
       },
       { rootMargin: "200px" },
     );
+
     observer.observe(el);
+
     return () => observer.disconnect();
   }, [src]);
 
@@ -185,10 +216,14 @@ const LazyImage = React.memo(function LazyImage({ src, alt }) {
       ref={wrapperRef}
       className="absolute inset-0 w-full h-full overflow-hidden"
     >
-      {!loaded && !failed && (
-        <div className="absolute inset-0 bg-muted/40" />
+      {!loaded && !failed && <div className="absolute inset-0 bg-muted/40" />}
+
+      {failed && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-[10px] text-muted-foreground">
+          Image unavailable
+        </div>
       )}
-      {failed && <div className="absolute inset-0 flex items-center justify-center bg-muted/50 text-[10px] text-muted-foreground">Image unavailable</div>}
+
       {realSrc && (
         <img
           src={realSrc}
@@ -213,22 +248,31 @@ function LazyVideo({ src, isSelected }) {
 
   useEffect(() => {
     const el = wrapperRef.current;
+
     if (!el) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => setIsVisible(entry.isIntersecting),
       { rootMargin: "150px" },
     );
+
     observer.observe(el);
+
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
     const video = videoRef.current;
+
     if (!video || !src) return;
 
     if (isVisible && isSelected) {
-      if (video.getAttribute("src") !== src) video.setAttribute("src", src);
+      if (video.getAttribute("src") !== src) {
+        video.setAttribute("src", src);
+      }
+
       const playPromise = video.play();
+
       if (playPromise && typeof playPromise.catch === "function") {
         playPromise.catch(() => {});
       }
@@ -274,10 +318,14 @@ function EmptyState({ label, sublabel = "" }) {
           strokeLinecap="round"
         />
       </svg>
+
       <div className="text-center">
         <p className="text-xs font-semibold text-foreground/80">{label}</p>
+
         {sublabel ? (
-          <p className="mt-1 text-[10px] font-medium text-muted-foreground">{sublabel}</p>
+          <p className="mt-1 text-[10px] font-medium text-muted-foreground">
+            {sublabel}
+          </p>
         ) : null}
       </div>
     </div>
@@ -297,7 +345,7 @@ function LoadingGrid() {
             background:
               "linear-gradient(90deg,#e8e8e8 25%,#f5f5f5 37%,#e8e8e8 63%)",
             backgroundSize: "400% 100%",
-            animation: `shimmerSlide 1.2s ease infinite`,
+            animation: "shimmerSlide 1.2s ease infinite",
             animationDelay: `${i * 50}ms`,
           }}
         />
@@ -313,7 +361,10 @@ const Tile = React.memo(function Tile({ item, isSelected, onSelect, isVideo }) {
       onPointerEnter={() => preloadCanvasAsset(item)}
       onPointerDown={() => preloadCanvasAsset(item)}
       onClick={() => onSelect(item)}
-      style={{ contentVisibility: "auto", containIntrinsicSize: "90px 90px" }}
+      style={{
+        contentVisibility: "auto",
+        containIntrinsicSize: "90px 90px",
+      }}
       className={`relative aspect-square overflow-hidden rounded-[14px] border-2 bg-[#edf1f7] dark:bg-[#1b2536] transition-all duration-150 focus:outline-none ${
         isSelected
           ? "border-[#2F80EA] shadow-[0_6px_16px_rgba(44,115,232,0.15)]"
@@ -390,9 +441,14 @@ function TabBtn({ active, onClick, icon, label, count }) {
     >
       {icon}
       {label}
+
       {count != null && (
         <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-[#d9e7ff] text-[#2F80EA]" : "bg-white/70 dark:bg-[#223047] text-[#667085] dark:text-[#b9c5d8]"}`}
+          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+            active
+              ? "bg-[#d9e7ff] text-[#2F80EA]"
+              : "bg-white/70 dark:bg-[#223047] text-[#667085] dark:text-[#b9c5d8]"
+          }`}
         >
           {count}
         </span>
@@ -407,6 +463,7 @@ export default function ListOfTemplates({
   onTabChange,
 }) {
   const { selectedCompany } = useSelectedCompany();
+
   const selType = getSelType();
   const filterCompany = normalizeEditorTemplateFilter(selectedCompany?.id);
   const filterType = normalizeEditorTemplateFilter(selType?.type);
@@ -422,15 +479,17 @@ export default function ListOfTemplates({
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("image");
   const [categoryOpen, setCategoryOpen] = useState(false);
-  const [categoryKey, setCategoryKey] = useState(() =>
-    isEverydayMoments && filterSubType
-      ? getEverydayMomentSubtypeKey(filterSubType)
-      : "",
-  );
-  const [refreshRequestId, setRefreshRequestId] = useState(0);
 
+  // Default selection is always All Categories.
+  const [categoryKey, setCategoryKey] = useState("");
+
+  const [refreshRequestId, setRefreshRequestId] = useState(0);
   const [pendingSelectedKey, setPendingSelectedKey] = useState(null);
-  const [meetingHostMode, setMeetingHostMode] = useState(() => getMeetingHostMode());
+
+  const [meetingHostMode, setMeetingHostMode] = useState(() =>
+    getMeetingHostMode(),
+  );
+
   const [closeFilter, setCloseFilter] = useState(() => getCloseFilter());
 
   const sentinelRef = useRef(null);
@@ -447,32 +506,35 @@ export default function ListOfTemplates({
 
   useEffect(() => {
     setCategoryOpen(false);
-    setCategoryKey(
-      isEverydayMoments && filterSubType
-        ? getEverydayMomentSubtypeKey(filterSubType)
-        : "",
-    );
+    setCategoryKey("");
   }, [filterSubType, filterType, isEverydayMoments]);
 
   useEffect(() => {
     const handlePageRefresh = (event) => {
       if (event.detail?.target !== "editor-templates") return;
+
       event.detail.handled = true;
 
       _editorTemplateCache.clear();
       clearAllTemplateGraphicsCache();
+
       refreshSequenceRef.current += 1;
       const id = refreshSequenceRef.current;
+
       pendingRefreshRef.current = {
         id,
         complete: event.detail?.complete,
       };
+
       setLoading(true);
       setRefreshRequestId(id);
     };
 
     window.addEventListener(PAGE_REFRESH_EVENT, handlePageRefresh);
-    return () => window.removeEventListener(PAGE_REFRESH_EVENT, handlePageRefresh);
+
+    return () => {
+      window.removeEventListener(PAGE_REFRESH_EVENT, handlePageRefresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -480,17 +542,23 @@ export default function ListOfTemplates({
       if (e.key === "Meeting") {
         setMeetingHostMode(getMeetingHostMode());
       }
+
       if (e.key === "close_filter") {
         setCloseFilter(getCloseFilter());
       }
     };
+
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   useEffect(() => {
     const finishRequestedRefresh = (error) => {
       if (pendingRefreshRef.current?.id !== refreshRequestId) return;
+
       const complete = pendingRefreshRef.current.complete;
       pendingRefreshRef.current = null;
       complete?.(error);
@@ -509,6 +577,7 @@ export default function ListOfTemplates({
 
       const isGeneralTemplate =
         mainTypeLower === "general" || mainTypeLower === "genaral";
+
       const fetchSubType = isEverydayMoments ? "" : filterSubType;
 
       const editorSeed = readEditorTemplateSeed({
@@ -517,9 +586,12 @@ export default function ListOfTemplates({
         mainType: selType?.MainType,
         companyId: filterCompanyId,
       });
+
       const seededItems = editorSeed.items;
+
       const requestedSelectionKey =
         editorSeed.selectedGraphicKey || selType?.selectedGraphicKey || "";
+
       const selectionScope = `${filterType}__${filterSubType}__${selType?.MainType || ""}__${filterCompanyId}`;
 
       if (selectionScopeRef.current !== selectionScope) {
@@ -530,7 +602,9 @@ export default function ListOfTemplates({
 
       if (seededItems.length > 0) {
         setAllItems(seededItems);
+
         renderedCount.current = Math.min(BATCH_SIZE, seededItems.length);
+
         setVisibleItems(seededItems.slice(0, BATCH_SIZE));
 
         const seededDefault =
@@ -540,13 +614,21 @@ export default function ListOfTemplates({
           ) ||
           seededItems.find((item) => !item.backgroundVideoUrl) ||
           seededItems[0];
+
         const nextSeeded = cleanItem(seededDefault);
+
         const nextSeededKey = getEditorGraphicSelectionKey(seededDefault);
+
         selectedRef.current = nextSeeded;
         selectedKeyRef.current = nextSeededKey;
+
         setSelected(nextSeeded);
         setPendingSelectedKey(nextSeededKey || null);
-        if (seededDefault?.backgroundVideoUrl) setActiveTab("video");
+
+        if (seededDefault?.backgroundVideoUrl) {
+          setActiveTab("video");
+        }
+
         setLoading(false);
       }
 
@@ -556,7 +638,9 @@ export default function ListOfTemplates({
       // avoids hundreds/thousands of unrelated graphics and Firestore reads.
       if (filterType === "Festival" && seededItems.length > 0) {
         const festivalCacheKey = `${filterType}__${filterSubType}__FestivalSelected__${filterCompanyId}__${meetingHostMode}__${closeFilter}__${selType?.id || ""}`;
+
         _editorTemplateCache.set(festivalCacheKey, [...seededItems]);
+
         finishRequestedRefresh();
         return;
       }
@@ -566,25 +650,32 @@ export default function ListOfTemplates({
         : isGeneralTemplate
           ? "General"
           : "MLM";
-      const cacheSelectionId = filterType === "Festival" ? selType?.id || "" : "";
+
+      const cacheSelectionId =
+        filterType === "Festival" ? selType?.id || "" : "";
+
       const cacheKey = `${filterType}__${fetchSubType}__${cacheSource}__${filterCompanyId}__${meetingHostMode}__${closeFilter}__${cacheSelectionId}`;
 
       if (_editorTemplateCache?.has(cacheKey)) {
         const cachedItems = _editorTemplateCache.get(cacheKey);
+
         const preferredSelectionKey =
           selectedKeyRef.current || requestedSelectionKey;
+
         const filteredItems = prepareEditorItemsForSelection(
           cachedItems,
           preferredSelectionKey,
           seededItems,
           seededItems,
         );
+
         setAllItems(filteredItems);
         renderedCount.current = 0;
 
         const currentSelectedItem =
           findEditorItemBySelectionKey(filteredItems, preferredSelectionKey) ||
           filteredItems.find((i) => i.id === selectedRef.current?.id);
+
         const defaultItem =
           currentSelectedItem ||
           filteredItems.find((i) => !i.backgroundVideoUrl) ||
@@ -592,23 +683,35 @@ export default function ListOfTemplates({
           null;
 
         const nextSelected = defaultItem ? cleanItem(defaultItem) : null;
+
         const nextSelectedKey = getEditorGraphicSelectionKey(defaultItem);
+
         selectedRef.current = nextSelected;
         selectedKeyRef.current = nextSelectedKey;
+
         setSelected(nextSelected);
         setPendingSelectedKey(nextSelectedKey || null);
-        if (defaultItem?.backgroundVideoUrl) setActiveTab("video");
+
+        if (defaultItem?.backgroundVideoUrl) {
+          setActiveTab("video");
+        }
 
         const firstBatch = filteredItems.slice(0, BATCH_SIZE);
+
         setVisibleItems(firstBatch);
         renderedCount.current = firstBatch.length;
         setLoading(false);
         finishRequestedRefresh();
+
         return;
       }
 
-      if (seededItems.length === 0) setLoading(true);
+      if (seededItems.length === 0) {
+        setLoading(true);
+      }
+
       setError(null);
+
       try {
         let items = [];
 
@@ -617,10 +720,12 @@ export default function ListOfTemplates({
             filterType,
             filterCompanyId,
           );
+
           items = everydayTemplates.flatMap((template) => {
             const graphics = Array.isArray(template?.GraphicsLink)
               ? template.GraphicsLink.filter(Boolean)
               : [];
+
             return graphics.map((graphic) => ({
               ...graphic,
               _template: template,
@@ -637,49 +742,83 @@ export default function ListOfTemplates({
 
             if (!template && selType?.id) {
               const master = await fetchGeneralMasterCatalog();
+
               const masterTemplate = master?.data?.[String(selType.id)] || null;
-              if (masterTemplate) template = { id: String(selType.id), ...masterTemplate };
+
+              if (masterTemplate) {
+                template = {
+                  id: String(selType.id),
+                  ...masterTemplate,
+                };
+              }
             }
 
             if (!template && selType?.id) {
               const snap = await getDoc(
                 doc(db, COLLECTIONS.MLMTEMPLATE, String(selType.id)),
               );
-              if (snap.exists()) template = { id: snap.id, ...snap.data() };
+
+              if (snap.exists()) {
+                template = {
+                  id: snap.id,
+                  ...snap.data(),
+                };
+              }
             }
 
             if (
               template &&
-              String(template.MainType || "").trim().toLowerCase() === "general" &&
+              String(template.MainType || "")
+                .trim()
+                .toLowerCase() === "general" &&
               template.SelectType === "Festival" &&
               template.Active === true &&
               template.Launched === true
             ) {
-              (template.GraphicsLink || []).filter(Boolean).forEach((graphic) => {
-                items.push({ ...graphic, _template: template });
-              });
+              (template.GraphicsLink || [])
+                .filter(Boolean)
+                .forEach((graphic) => {
+                  items.push({
+                    ...graphic,
+                    _template: template,
+                  });
+                });
             }
           } else {
             // Every General editor flow is CDN-first so an Admin edit becomes
             // visible without shipping a new app bundle. No bundled General
             // export is used at runtime anymore.
             const cdnTemplates = await fetchGeneralTypeCatalog(filterType);
+
             if (cdnTemplates !== null) {
               cdnTemplates.forEach((template) => {
                 if (
                   template.MainType !== "General" ||
                   template.Active !== true ||
                   template.Launched !== true ||
-                  (fetchSubType && String(template.Subtype || "").trim() !== String(fetchSubType).trim())
-                ) return;
+                  (fetchSubType &&
+                    String(template.Subtype || "").trim() !==
+                      String(fetchSubType).trim())
+                ) {
+                  return;
+                }
+
                 (template.GraphicsLink || []).forEach((graphic) => {
-                  items.push({ ...graphic, _template: template });
+                  items.push({
+                    ...graphic,
+                    _template: template,
+                  });
                 });
               });
             } else {
               const master = await fetchGeneralMasterCatalog();
+
               if (master) {
-                items = getGeneralItemsForEditor(master, filterType, fetchSubType);
+                items = getGeneralItemsForEditor(
+                  master,
+                  filterType,
+                  fetchSubType,
+                );
               } else {
                 const snap = await getDocs(
                   query(
@@ -690,14 +829,26 @@ export default function ListOfTemplates({
                     where("Launched", "==", true),
                   ),
                 );
+
                 snap.forEach((docSnap) => {
-                  const template = { id: docSnap.id, ...docSnap.data() };
+                  const template = {
+                    id: docSnap.id,
+                    ...docSnap.data(),
+                  };
+
                   if (
                     fetchSubType &&
-                    String(template.Subtype || "").trim() !== String(fetchSubType).trim()
-                  ) return;
+                    String(template.Subtype || "").trim() !==
+                      String(fetchSubType).trim()
+                  ) {
+                    return;
+                  }
+
                   (template.GraphicsLink || []).forEach((graphic) => {
-                    items.push({ ...graphic, _template: template });
+                    items.push({
+                      ...graphic,
+                      _template: template,
+                    });
                   });
                 });
               }
@@ -709,13 +860,26 @@ export default function ListOfTemplates({
               ? await fetchMlmTypeCatalog(filterCompanyId, filterType)
               : null;
 
-          if (cdnTemplates !== null && selType?.MainType === "MLM" && filterCompanyId) {
+          if (
+            cdnTemplates !== null &&
+            selType?.MainType === "MLM" &&
+            filterCompanyId
+          ) {
             cdnTemplates.forEach((t) => {
               if (
                 rawFilterSubType &&
-                String(t?.Subtype || "").trim() !== String(rawFilterSubType).trim()
-              ) return;
-              (t.GraphicsLink || []).forEach((g) => items.push({ ...g, _template: t }));
+                String(t?.Subtype || "").trim() !==
+                  String(rawFilterSubType).trim()
+              ) {
+                return;
+              }
+
+              (t.GraphicsLink || []).forEach((g) => {
+                items.push({
+                  ...g,
+                  _template: t,
+                });
+              });
             });
           } else {
             const constraints = [
@@ -724,35 +888,57 @@ export default function ListOfTemplates({
             ];
 
             if (rawFilterSubType && rawFilterSubType !== "") {
-              constraints.splice(1, 0, where("Subtype", "==", rawFilterSubType));
+              constraints.splice(
+                1,
+                0,
+                where("Subtype", "==", rawFilterSubType),
+              );
             }
 
             if (filterCompanyId && selType?.MainType === "MLM") {
               constraints.push(where("Company", "==", filterCompanyId));
             }
 
-            const q = query(collection(db, COLLECTIONS.MLMTEMPLATE), ...constraints);
+            const q = query(
+              collection(db, COLLECTIONS.MLMTEMPLATE),
+              ...constraints,
+            );
+
             const snap = await getDocs(q);
+
             snap.forEach((docSnap) => {
-              const t = { id: docSnap.id, ...docSnap.data() };
-              (t.GraphicsLink || []).forEach((g) => items.push({ ...g, _template: t }));
+              const t = {
+                id: docSnap.id,
+                ...docSnap.data(),
+              };
+
+              (t.GraphicsLink || []).forEach((g) => {
+                items.push({
+                  ...g,
+                  _template: t,
+                });
+              });
             });
           }
         }
 
         items.sort((a, b) => {
           const aSerial = Number(a._template?.serial ?? a.serial ?? 0);
+
           const bSerial = Number(b._template?.serial ?? b.serial ?? 0);
+
           return aSerial - bSerial;
         });
 
         let filteredItems = items;
+
         try {
           if (filterSubType === "CLOSING") {
             filteredItems = items.filter(
               (g) => String(g.Filter) === String(closeFilter),
             );
           }
+
           if (filterType === "Meeting" || filterType === "General_Meeting") {
             if (meetingHostMode === "add") {
               filteredItems = items.filter((g) => String(g.Filter) === "true");
@@ -770,6 +956,7 @@ export default function ListOfTemplates({
           const idx = filteredItems.findIndex(
             (i) => i._template?.id === selType.id,
           );
+
           if (idx > 0) {
             const [found] = filteredItems.splice(idx, 1);
             filteredItems.unshift(found);
@@ -777,10 +964,12 @@ export default function ListOfTemplates({
         }
 
         const cachedFilteredItems = [...filteredItems];
+
         _editorTemplateCache.set(cacheKey, cachedFilteredItems);
 
         const preferredSelectionKey =
           selectedKeyRef.current || requestedSelectionKey;
+
         const displayItems = prepareEditorItemsForSelection(
           cachedFilteredItems,
           preferredSelectionKey,
@@ -794,28 +983,32 @@ export default function ListOfTemplates({
         const currentSelectedItem =
           findEditorItemBySelectionKey(displayItems, preferredSelectionKey) ||
           displayItems.find((i) => i.id === selectedRef.current?.id);
+
         const defaultItem =
           currentSelectedItem ||
           displayItems.find((i) => !i.backgroundVideoUrl) ||
           displayItems[0] ||
           null;
 
-        const nextSelected = defaultItem
-          ? cleanItem(defaultItem)
-          : null;
+        const nextSelected = defaultItem ? cleanItem(defaultItem) : null;
+
         const nextSelectedKey = getEditorGraphicSelectionKey(defaultItem);
 
         selectedRef.current = nextSelected;
         selectedKeyRef.current = nextSelectedKey;
+
         setSelected(nextSelected);
         setPendingSelectedKey(nextSelectedKey || null);
-        if (defaultItem?.backgroundVideoUrl) setActiveTab("video");
+
+        if (defaultItem?.backgroundVideoUrl) {
+          setActiveTab("video");
+        }
 
         const firstBatch = displayItems.slice(0, BATCH_SIZE);
+
         setVisibleItems(firstBatch);
         renderedCount.current = firstBatch.length;
       } catch (err) {
-        
         setError("Failed to load templates. Please try again.");
         finishRequestedRefresh(err);
       } finally {
@@ -837,10 +1030,7 @@ export default function ListOfTemplates({
   ]);
 
   const categoryOptions = useMemo(
-    () =>
-      isEverydayMoments
-        ? getEverydayMomentSubtypeOptions(allItems)
-        : [],
+    () => (isEverydayMoments ? getEverydayMomentSubtypeOptions(allItems) : []),
     [allItems, isEverydayMoments],
   );
 
@@ -853,6 +1043,7 @@ export default function ListOfTemplates({
     ) {
       return;
     }
+
     setCategoryKey("");
   }, [categoryKey, categoryOptions, isEverydayMoments, loading]);
 
@@ -864,24 +1055,34 @@ export default function ListOfTemplates({
     [allItems, categoryKey, isEverydayMoments],
   );
 
-  const imageItems = useMemo(
-    () => categoryItems.filter((item) => !item.backgroundVideoUrl),
-    [categoryItems],
-  );
-  const fbVideoItems = useMemo(
-    () => categoryItems.filter((item) => !!item.backgroundVideoUrl),
-    [categoryItems],
-  );
+  const imageItems = useMemo(() => {
+    const items = categoryItems.filter((item) => !item.backgroundVideoUrl);
+
+    return isEverydayMoments && !categoryKey
+      ? mixEverydayMomentItems(items)
+      : items;
+  }, [categoryItems, categoryKey, isEverydayMoments]);
+
+  const fbVideoItems = useMemo(() => {
+    const items = categoryItems.filter((item) => !!item.backgroundVideoUrl);
+
+    return isEverydayMoments && !categoryKey
+      ? mixEverydayMomentItems(items)
+      : items;
+  }, [categoryItems, categoryKey, isEverydayMoments]);
+
   const videoItems = useMemo(
     () => (fbVideoItems.length > 0 ? fbVideoItems : PRESET_VIDEO_ITEMS),
     [fbVideoItems],
   );
+
   const tabItems = useMemo(
     () => (activeTab === "video" ? videoItems : imageItems),
     [activeTab, videoItems, imageItems],
   );
 
   const tabItemsRef = useRef(tabItems);
+
   useEffect(() => {
     tabItemsRef.current = tabItems;
   }, [tabItems]);
@@ -891,7 +1092,9 @@ export default function ListOfTemplates({
 
   useEffect(() => {
     tabRenderedCount.current = 0;
+
     const firstBatch = tabItems.slice(0, BATCH_SIZE);
+
     setVisibleTabItems(firstBatch);
     tabRenderedCount.current = firstBatch.length;
   }, [tabItems]);
@@ -904,14 +1107,18 @@ export default function ListOfTemplates({
 
   const loadMore = useCallback(() => {
     const items = tabItemsRef.current;
+
     if (tabRenderedCount.current >= items.length) return;
+
     setLoadingMore(true);
+
     // Keep scroll responsive by committing a small batch in one frame.
     window.requestAnimationFrame(() => {
       const next = items.slice(
         tabRenderedCount.current,
         tabRenderedCount.current + BATCH_SIZE,
       );
+
       setVisibleTabItems((prev) => [...prev, ...next]);
       tabRenderedCount.current += next.length;
       setLoadingMore(false);
@@ -920,28 +1127,44 @@ export default function ListOfTemplates({
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
+
     if (!sentinel) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingMore) loadMore();
+        if (entries[0].isIntersecting && !loadingMore) {
+          loadMore();
+        }
       },
       { rootMargin: "120px" },
     );
+
     observer.observe(sentinel);
+
     return () => observer.disconnect();
   }, [loadMore, loadingMore]);
 
   const handleTab = useCallback(
     (tab) => {
       if (tab === activeTab) return;
+
       setActiveTab(tab);
-      if (onTabChange) onTabChange(tab);
+
+      if (onTabChange) {
+        onTabChange(tab);
+      }
+
       const items = tab === "video" ? videoItems : imageItems;
+
       const nextItem = items[0] || null;
+
       const next = nextItem ? cleanItem(nextItem) : null;
+
       const nextSelectionKey = getEditorGraphicSelectionKey(nextItem);
+
       selectedKeyRef.current = nextSelectionKey;
       setPendingSelectedKey(nextSelectionKey || null);
+
       // Update the canvas immediately — startTransition was marking this
       // as low priority, so the selected template could sit behind other
       // pending work and take a visible beat to appear on the canvas.
@@ -954,9 +1177,12 @@ export default function ListOfTemplates({
   const handleSelect = useCallback(
     (item) => {
       const nextSelectionKey = getEditorGraphicSelectionKey(item);
+
       selectedKeyRef.current = nextSelectionKey;
       setPendingSelectedKey(nextSelectionKey || null);
+
       const nextSelected = cleanItem(item);
+
       selectedRef.current = nextSelected;
       setSelected(nextSelected);
     },
@@ -969,7 +1195,9 @@ export default function ListOfTemplates({
         allItems,
         nextCategoryKey,
       );
+
       let nextTab = activeTab;
+
       let nextTabItems = nextCategoryItems.filter((item) =>
         nextTab === "video"
           ? Boolean(item.backgroundVideoUrl)
@@ -980,11 +1208,16 @@ export default function ListOfTemplates({
         nextTab = nextCategoryItems.some((item) => !item.backgroundVideoUrl)
           ? "image"
           : "video";
+
         nextTabItems = nextCategoryItems.filter((item) =>
           nextTab === "video"
             ? Boolean(item.backgroundVideoUrl)
             : !item.backgroundVideoUrl,
         );
+      }
+
+      if (isEverydayMoments && !nextCategoryKey) {
+        nextTabItems = mixEverydayMomentItems(nextTabItems);
       }
 
       setCategoryKey(nextCategoryKey);
@@ -996,24 +1229,38 @@ export default function ListOfTemplates({
       }
 
       const currentKey = selectedKeyRef.current;
+
       const currentStillVisible = nextTabItems.find(
         (item) => getEditorGraphicSelectionKey(item) === currentKey,
       );
+
       const nextItem = currentStillVisible || nextTabItems[0] || null;
-      if (nextItem) handleSelect(nextItem);
+
+      if (nextItem) {
+        handleSelect(nextItem);
+      }
     },
-    [activeTab, allItems, handleSelect, onTabChange],
+    [activeTab, allItems, handleSelect, isEverydayMoments, onTabChange],
   );
 
   const visibleSubtypeSections = useMemo(
     () =>
       isEverydayMoments
-        ? groupEverydayMomentItemsBySubtype(visibleTabItems)
+        ? categoryKey
+          ? groupEverydayMomentItemsBySubtype(visibleTabItems)
+          : [
+              {
+                key: "all-categories",
+                label: "All Categories",
+                items: visibleTabItems,
+              },
+            ]
         : [],
-    [isEverydayMoments, visibleTabItems],
+    [categoryKey, isEverydayMoments, visibleTabItems],
   );
 
   const selectedSelectionKey = pendingSelectedKey || selectedKeyRef.current;
+
   const isItemSelected = useCallback(
     (item) =>
       selectedSelectionKey
@@ -1026,83 +1273,93 @@ export default function ListOfTemplates({
     <div className="flex h-full min-h-0 w-full flex-col bg-transparent">
       <div className="flex-shrink-0 px-4 pt-2 pb-2">
         <div className="flex items-center gap-1.5 rounded-[18px] bg-[#eef2f7] dark:bg-[#182234] p-1.5">
-        {isEverydayMoments && (
-          <button
-            type="button"
-            onClick={() => setCategoryOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={categoryOpen}
-            className={`flex min-w-0 items-center justify-center gap-1.5 rounded-[14px] px-3 py-2 text-[12px] font-semibold transition-all duration-200 ${
-              categoryKey
-                ? "bg-white text-[#2F80EA] shadow-sm dark:bg-[#151d2b]"
-                : "text-[#667085] dark:text-[#b9c5d8] hover:text-[#2F80EA]"
-            }`}
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
+          {isEverydayMoments && (
+            <button
+              type="button"
+              onClick={() => setCategoryOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={categoryOpen}
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-[14px] px-3 py-2 text-[12px] font-semibold transition-all duration-200 ${
+                categoryKey
+                  ? "bg-white text-[#2F80EA] shadow-sm dark:bg-[#151d2b]"
+                  : "text-[#667085] dark:text-[#b9c5d8] hover:text-[#2F80EA]"
+              }`}
             >
-              <path d="M4 6h16M7 12h10M10 18h4" />
-            </svg>
-            Categories
-          </button>
-        )}
-        <TabBtn
-          active={activeTab === "image"}
-          onClick={() => handleTab("image")}
-          label="Image"
-          count={imageItems.length || null}
-          icon={
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <path d="m21 15-5-5L5 21" />
-            </svg>
-          }
-        />
-        <TabBtn
-          active={activeTab === "video"}
-          onClick={() => handleTab("video")}
-          label="Video"
-          count={videoItems.length || null}
-          icon={
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-          }
-        />
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <path d="M4 6h16M7 12h10M10 18h4" />
+              </svg>
+              Categories
+            </button>
+          )}
+
+          <TabBtn
+            active={activeTab === "image"}
+            onClick={() => handleTab("image")}
+            label="Image"
+            count={imageItems.length || null}
+            icon={
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="m21 15-5-5L5 21" />
+              </svg>
+            }
+          />
+
+          <TabBtn
+            active={activeTab === "video"}
+            onClick={() => handleTab("video")}
+            label="Video"
+            count={videoItems.length || null}
+            icon={
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+            }
+          />
         </div>
       </div>
 
-      <div data-template-scroll="true" className="w-full flex-1 min-h-0 overflow-y-auto px-4 pb-6" style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
+      <div
+        data-template-scroll="true"
+        className="w-full flex-1 min-h-0 overflow-y-auto px-4 pb-6"
+        style={{
+          overscrollBehavior: "contain",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
         {error && (
           <div className="rounded-xl bg-danger/10 border border-danger/20 p-3 text-xs text-danger mb-2">
             {error}
           </div>
         )}
+
         {!filterType && !loading && (
           <div className="rounded-xl bg-warning/10 p-3 text-xs text-warning-foreground">
             No template type found.
@@ -1122,20 +1379,24 @@ export default function ListOfTemplates({
           />
         )}
 
-        {!loading && tabItems.length > 0 &&
+        {!loading &&
+          tabItems.length > 0 &&
           (isEverydayMoments ? (
             <div className="space-y-5">
               {visibleSubtypeSections.map((section) => (
                 <section key={section.key}>
                   <div className="mb-2 flex items-center gap-2">
                     <span className="h-4 w-1 rounded-full bg-accent" />
+
                     <h3 className="truncate text-[12px] font-bold text-foreground/85">
                       {section.label}
                     </h3>
+
                     <span className="ml-auto rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                       {section.items.length}
                     </span>
                   </div>
+
                   <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
                     {section.items.map((item, idx) => (
                       <Tile
@@ -1174,7 +1435,9 @@ export default function ListOfTemplates({
                 <div
                   key={i}
                   className="w-1.5 h-1.5 rounded-full bg-accent/40 animate-bounce"
-                  style={{ animationDelay: `${i * 100}ms` }}
+                  style={{
+                    animationDelay: `${i * 100}ms`,
+                  }}
                 />
               ))}
             </div>
@@ -1200,10 +1463,12 @@ export default function ListOfTemplates({
                 <h3 className="text-[16px] font-bold text-foreground">
                   Categories
                 </h3>
+
                 <p className="text-[11px] text-muted-foreground">
                   Select a subtype to filter templates
                 </p>
               </div>
+
               <button
                 type="button"
                 onClick={() => setCategoryOpen(false)}
@@ -1226,10 +1491,14 @@ export default function ListOfTemplates({
 
             <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-0.5">
               {[
-                { key: "", label: "All Categories" },
+                {
+                  key: "",
+                  label: "All Categories",
+                },
                 ...categoryOptions,
               ].map((option) => {
                 const active = option.key === categoryKey;
+
                 return (
                   <button
                     key={option.key || "all-categories"}
@@ -1242,6 +1511,7 @@ export default function ListOfTemplates({
                     }`}
                   >
                     <span className="truncate">{option.label}</span>
+
                     {active && (
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-white">
                         <svg
