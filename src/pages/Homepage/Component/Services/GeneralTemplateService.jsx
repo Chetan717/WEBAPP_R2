@@ -16,6 +16,10 @@ import {
 import { primeAllTemplateGraphicsCache } from "./Alltemplateservice";
 import { RANK_PROMOTION_TYPES } from "../../../../utils/templateTypeConfig";
 import {
+  annotateSubtypeAddedAt,
+  subtypeTimestamp,
+} from "../../../../utils/subtypeAddedAt.js";
+import {
   fetchHomeCompanyCatalog,
   fetchHomeGeneralCatalog,
   getTemplateCatalogVersion,
@@ -62,7 +66,6 @@ const TYPE_GROUPS = [
 ];
 export const TEMPLATE_GROUP_COUNT = TYPE_GROUPS.length;
 
-
 // 5-minute memory + same-tab session cache to avoid duplicate Firestore reads.
 // Explicit refresh/company invalidation still clears the cache immediately.
 const _cache = new Map();
@@ -75,7 +78,11 @@ function readSessionCache(cacheKey) {
     const raw = sessionStorage.getItem(`${SESSION_CACHE_PREFIX}${cacheKey}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.data) || Date.now() - Number(parsed.ts || 0) >= CACHE_TTL_MS) {
+    if (
+      !parsed ||
+      !Array.isArray(parsed.data) ||
+      Date.now() - Number(parsed.ts || 0) >= CACHE_TTL_MS
+    ) {
       sessionStorage.removeItem(`${SESSION_CACHE_PREFIX}${cacheKey}`);
       return null;
     }
@@ -119,12 +126,18 @@ export function clearTemplateCache() {
 const normalizeTemplate = (data, id = data?.id) => ({
   id: id || data?.id || "",
   MainType: data?.MainType,
+  Company: data?.Company || data?.company || "",
   image: data?.Showcase_url || data?.image || "",
   GraphicsLink: Array.isArray(data?.GraphicsLink) ? data.GraphicsLink : [],
   type: data?.SelectType || data?.type,
   Subtype: data?.Subtype,
   ShowCaseForm: data?.ShowCaseForm,
   serial: data?.serial,
+  createdAt: subtypeTimestamp(data?.createdAt),
+  subtypeAddedAt:
+    data?.subtypeAddedAt === undefined
+      ? undefined
+      : subtypeTimestamp(data.subtypeAddedAt) || "",
 });
 const normalizeDoc = (doc) => normalizeTemplate(doc.data(), doc.id);
 
@@ -174,13 +187,17 @@ export const fetchGeneralTemplates = async (groupIndex, company) => {
       fetchHomeGeneralCatalog(),
       company ? fetchHomeCompanyCatalog(company) : Promise.resolve(null),
     ]);
-    const generalIndexState = homeGeneralCatalog === null
-      ? await loadGeneralTemplateIndex()
-      : { source: "cdn" };
+    const generalIndexState =
+      homeGeneralCatalog === null
+        ? await loadGeneralTemplateIndex()
+        : { source: "cdn" };
 
     const results = await Promise.all(
       selectedTypes.map(async (type) => {
-        const bundledGeneralTemplates = getGeneralTemplatesForHome(type, HOME_LIMIT);
+        const bundledGeneralTemplates = getGeneralTemplatesForHome(
+          type,
+          HOME_LIMIT,
+        );
 
         const hasGeneralCdn = homeGeneralCatalog !== null;
         const hasCompanyCdn = company ? homeCompanyCatalog !== null : true;
@@ -196,9 +213,15 @@ export const fetchGeneralTemplates = async (groupIndex, company) => {
           const raw = Array.isArray(homeGeneralCatalog?.types?.[type])
             ? homeGeneralCatalog.types[type]
             : [];
-          generalTemplates = raw.map((item) => normalizeTemplate(item)).slice(0, HOME_LIMIT);
-          generalCount = Number(homeGeneralCatalog?.counts?.[type] ?? raw.length);
-          completeGeneralTemplates = generalCount < HOME_LIMIT ? generalTemplates : null;
+          generalTemplates = annotateSubtypeAddedAt(
+            raw.map((item) => normalizeTemplate(item)),
+            homeGeneralCatalog?.subtypeDates?.[type],
+          ).slice(0, HOME_LIMIT);
+          generalCount = Number(
+            homeGeneralCatalog?.counts?.[type] ?? raw.length,
+          );
+          completeGeneralTemplates =
+            generalCount < HOME_LIMIT ? generalTemplates : null;
         } else if (generalIndexState?.source !== "cdn") {
           // Emergency only: if both R2 home catalog and all-General master are
           // unavailable, query Firestore so the app does not go blank.
@@ -215,13 +238,23 @@ export const fetchGeneralTemplates = async (groupIndex, company) => {
           generalTemplates = liveGeneralSnapshot.docs
             .filter((docSnap) => {
               const data = docSnap.data();
-              return data?.MainType === "General" && data?.Active === true && data?.Launched === true;
+              return (
+                data?.MainType === "General" &&
+                data?.Active === true &&
+                data?.Launched === true
+              );
             })
             .map(normalizeDoc)
             .sort((a, b) => Number(a.serial || 0) - Number(b.serial || 0))
             .slice(0, HOME_LIMIT);
           generalCount = generalTemplates.length;
-          completeGeneralTemplates = generalCount < HOME_LIMIT ? generalTemplates : null;
+          generalTemplates = annotateSubtypeAddedAt(
+            generalTemplates,
+            {},
+            { complete: liveGeneralSnapshot.docs.length < HOME_LIMIT },
+          );
+          completeGeneralTemplates =
+            generalCount < HOME_LIMIT ? generalTemplates : null;
         }
 
         let mlmTemplates = [];
@@ -230,7 +263,10 @@ export const fetchGeneralTemplates = async (groupIndex, company) => {
           const raw = Array.isArray(homeCompanyCatalog?.types?.[type])
             ? homeCompanyCatalog.types[type]
             : [];
-          mlmTemplates = raw.map((item) => normalizeTemplate(item)).slice(0, HOME_LIMIT);
+          mlmTemplates = annotateSubtypeAddedAt(
+            raw.map((item) => normalizeTemplate(item)),
+            homeCompanyCatalog?.subtypeDates?.[type],
+          ).slice(0, HOME_LIMIT);
           mlmCount = Number(homeCompanyCatalog?.counts?.[type] ?? raw.length);
         } else if (company) {
           const mlmSnapshot = await getDocs(
@@ -245,7 +281,11 @@ export const fetchGeneralTemplates = async (groupIndex, company) => {
               limit(HOME_LIMIT),
             ),
           );
-          mlmTemplates = mlmSnapshot.docs.map(normalizeDoc);
+          mlmTemplates = annotateSubtypeAddedAt(
+            mlmSnapshot.docs.map(normalizeDoc),
+            {},
+            { complete: mlmSnapshot.docs.length < HOME_LIMIT },
+          );
           mlmCount = mlmTemplates.length;
         }
 
@@ -282,7 +322,6 @@ export const fetchGeneralTemplates = async (groupIndex, company) => {
     }
     return data;
   } catch (error) {
-    
     return [];
   }
 };

@@ -1,4 +1,5 @@
 import { fetchGeneralMasterCatalog } from "./templateCdnService";
+import { annotateSubtypeAddedAt } from "../../../../utils/subtypeAddedAt.js";
 
 let templatesByType = new Map();
 let loadedSource = "unavailable";
@@ -28,6 +29,8 @@ function buildIndex(payload) {
       serial: data.serial,
       MainType: data.MainType,
       GraphicsLink: Array.isArray(data.GraphicsLink) ? data.GraphicsLink : [],
+      createdAt: data.createdAt,
+      subtypeAddedAt: data.subtypeAddedAt,
     };
 
     const existing = next.get(data.SelectType);
@@ -35,8 +38,9 @@ function buildIndex(payload) {
     else next.set(data.SelectType, [normalized]);
   }
 
-  for (const templates of next.values()) {
+  for (const [type, templates] of next) {
     templates.sort((a, b) => Number(a.serial || 0) - Number(b.serial || 0));
+    next.set(type, annotateSubtypeAddedAt(templates, {}, { complete: true }));
   }
 
   templatesByType = next;
@@ -50,8 +54,8 @@ export async function loadGeneralTemplateIndex({ force = false } = {}) {
     if (cdnPayload?.data && typeof cdnPayload.data === "object") {
       const marker = String(
         cdnPayload?.meta?.generatedAt ||
-        cdnPayload?.meta?.count ||
-        Object.keys(cdnPayload.data).length,
+          cdnPayload?.meta?.count ||
+          Object.keys(cdnPayload.data).length,
       );
       if (force || loadedSource !== "cdn" || marker !== loadedVersionMarker) {
         buildIndex(cdnPayload);
@@ -60,7 +64,9 @@ export async function loadGeneralTemplateIndex({ force = false } = {}) {
       loadedSource = "cdn";
       return {
         source: loadedSource,
-        count: Number(cdnPayload?.meta?.count || Object.keys(cdnPayload.data).length),
+        count: Number(
+          cdnPayload?.meta?.count || Object.keys(cdnPayload.data).length,
+        ),
       };
     }
 

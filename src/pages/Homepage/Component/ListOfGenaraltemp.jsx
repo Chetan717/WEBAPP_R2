@@ -22,12 +22,9 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
-import {
-  preloadImage,
-  markImageSeen,
-  seenImages,
-  isNewTemplate,
-} from "./templateCacheUtils";
+import { preloadImage, markImageSeen, seenImages } from "./templateCacheUtils";
+import AppPopup from "../../../components/AppPopup";
+import { isNewSubtype } from "../../../utils/subtypeAddedAt";
 import { hasMlmProfileInStorage } from "../../../utils/companyStorage";
 import { useSelectedCompany } from "../../../Context/SelectedCompanyContext";
 import { rememberEditorBackTarget } from "../../../utils/editorNavigation";
@@ -670,8 +667,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                     selectedTemp?.id === item?.id
                       ? "border-[#2F80EA] ring-2 ring-[#2F80EA]/20"
                       : "border-[#E4EAF3] dark:border-[#263146]"
-                  }`
-                }
+                  }`}
               >
                 <div
                   className={`relative w-full overflow-hidden bg-[#EAF1FB] dark:bg-[#172235] ${
@@ -693,7 +689,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                       <ImageIcon className="h-4 w-4" strokeWidth={1.6} />
                     </div>
                   )}
-                  {isNewTemplate(item.serial) ? <NewBadge /> : null}
+                  {isNewSubtype(item) ? <NewBadge /> : null}
                 </div>
 
                 <div
@@ -732,6 +728,10 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
 
   return (
     <div className="flex w-full flex-col pb-[14px]">
+      <AppPopup
+        onTemplateSelect={handleImagePress}
+        blocked={Boolean(profileModalPending || designationModalPending)}
+      />
       <style>{`
         @keyframes templateCardNewsTicker {
           from { transform: translateX(0); }
@@ -826,7 +826,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                             <ImageIcon className="h-4 w-4" strokeWidth={1.6} />
                           </div>
                         )}
-                        {isNewTemplate(item.serial) ? <NewBadge /> : null}
+                        {isNewSubtype(item) ? <NewBadge /> : null}
                       </div>
                       <div className="flex h-[27px] items-center px-2">
                         <AutoScrollCardLabel label={label} />
@@ -867,7 +867,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
 
       {loading && templates?.length > 0 && (
         <div className="flex justify-center py-4">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#DCE4EF] border-t-[#2F80EA] dark:border-[#2A3548] dark:border-t-[#70AFFF]" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#DCE4EF] border-t-[#2F80EA] dark:border-t-[#70AFFF]" />
         </div>
       )}
     </div>
