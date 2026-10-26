@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import logo from "/mlmboo2.ico";
+import logogif from "../public/logogif.gif";
 
 export default function SplashScreen({ onDone }) {
   const [visible, setVisible] = useState(true);
@@ -8,7 +8,7 @@ export default function SplashScreen({ onDone }) {
     const timer = setTimeout(() => {
       setVisible(false);
       setTimeout(onDone, 400);
-    }, 3100);
+    }, 3500);
 
     return () => clearTimeout(timer);
   }, [onDone]);
@@ -20,8 +20,8 @@ export default function SplashScreen({ onDone }) {
         background:
           "linear-gradient(150deg, var(--app-blue-start) 0%, #2778e8 45%, var(--app-blue-end) 100%)",
         transition: "opacity 0.4s ease",
-        opacity: visible ? 1 : 0,
-        pointerEvents: visible ? "all" : "none",
+        // opacity: visible ? 1 : 0,
+        // pointerEvents: visible ? "all" : "none",
       }}
     >
       <div className="pointer-events-none absolute -right-20 -top-16 h-72 w-72 rounded-full bg-white/[0.055]" />
@@ -31,15 +31,14 @@ export default function SplashScreen({ onDone }) {
       <div className="pointer-events-none absolute left-1/2 top-[48%] h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.09]" />
       <div className="pointer-events-none absolute left-1/2 top-[48%] h-[218px] w-[218px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.11]" />
 
-      <div className="flex h-full flex-col items-center justify-center px-6 pb-20">
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="flex h-[88px] w-[88px] items-center justify-center rounded-[24px] border-[3px] border-white/55 bg-white p-2 shadow-[0_16px_45px_rgba(7,47,123,0.35)]">
-            <img src={logo} alt="MLM LIVE" className="h-full w-full object-contain" />
+      <div className="flex h-full flex-col items-center justify-center  ">
+        <div className="relative  flex flex-col items-center pb-5">
+          <div className="flex h-[100px] w-[100px] items-center justify-center rounded-[24px] border-[3px] border-white/55 bg-white p-3 shadow-[0_16px_45px_rgba(7,47,123,0.35)]">
+            <img src={logogif} alt="MLM LIVE" className="h-full w-full object-contain" />
           </div>
-          <h1 className="mt-7 text-[23px] font-bold tracking-[0.055em]">MLM LIVE</h1>
-          <p className="mt-2 text-[15px] font-medium text-white/80">
+          {/* <p className="mt-2 text-[15px] font-medium text-white/80">
             Banners for your business, every day
-          </p>
+          </p> */}
         </div>
       </div>
 
