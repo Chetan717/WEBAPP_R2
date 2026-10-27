@@ -740,5 +740,19 @@
          "size": "square"
        }
      ]
-   }
+   },
+    {
+      "ID": "bboeAdRrH8UPiIlR0mba",
+      "name": "RICH AND ROYAL",
+      "logos": [
+        {
+          "link": "https://cdn.mlmposter.com/companies/logos/1793005798560_tgedmj.webp",
+          "size": "rectangle"
+        },
+        {
+          "link": "https://cdn.mlmposter.com/companies/logos/1793005798560_tgedmj.webp",
+          "size": "rectangle"
+        }
+      ]
+    }
 ]
