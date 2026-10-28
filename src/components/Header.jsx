@@ -409,7 +409,7 @@ export default function Header({
           effectiveHidden
             ? "pointer-events-none h-0 gap-0 border-b-0 border-transparent px-0 opacity-0"
             : useBlueSubpageHeader
-              ? "h-[56px] gap-3 border-b border-transparent bg-[linear-gradient(135deg,#2F80EA_0%,#236FDE_48%,#1454C5_100%)] px-4 opacity-100"
+              ? "h-[56px] gap-3 border-b border-transparent bg-[#2F80EA] px-4 opacity-100"
               : "h-[52px] gap-3 border-b border-border bg-background/95 px-4 opacity-100"
         }`}
       >
@@ -432,19 +432,17 @@ export default function Header({
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-        ) : (
-          // <button
-          //   onClick={handleMenuClick}
-          //   aria-label="Menu"
-          //   className="relative w-9 h-9 flex items-center justify-center rounded-full text-foreground hover:bg-foreground/8 active:scale-95 transition-all flex-shrink-0"
-          // >
-          //   <ListUl className="w-5 h-5" />
-          //   {isReporting && hasPendingInvites && (
-          //     <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-background" />
-          //   )}
-          // </button> 
-        null
-        )}
+        ) : // <button
+        //   onClick={handleMenuClick}
+        //   aria-label="Menu"
+        //   className="relative w-9 h-9 flex items-center justify-center rounded-full text-foreground hover:bg-foreground/8 active:scale-95 transition-all flex-shrink-0"
+        // >
+        //   <ListUl className="w-5 h-5" />
+        //   {isReporting && hasPendingInvites && (
+        //     <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-background" />
+        //   )}
+        // </button>
+        null}
 
         <div className="flex-1 min-w-0 flex items-center">
           {(isEditor || isForm) && typeName ? (
@@ -452,9 +450,11 @@ export default function Header({
               {typeName}
             </h1>
           ) : pageTitle ? (
-            <h1 className={`text-[15px] font-display font-bold truncate leading-tight ${
-              useBlueSubpageHeader ? "text-white" : "text-foreground"
-            }`}>
+            <h1
+              className={`text-[15px] font-display font-bold truncate leading-tight ${
+                useBlueSubpageHeader ? "text-white" : "text-foreground"
+              }`}
+            >
               {pageTitle}
             </h1>
           ) : isReporting ? (
@@ -516,7 +516,9 @@ export default function Header({
               disabled={refreshing}
               aria-label="Refresh page data"
               className={`flex items-center justify-center w-9 h-9 rounded-full active:scale-95 transition-all disabled:opacity-60 ${
-                useBlueSubpageHeader ? "bg-white/10 hover:bg-white/20" : "hover:bg-foreground/8"
+                useBlueSubpageHeader
+                  ? "bg-white/10 hover:bg-white/20"
+                  : "hover:bg-foreground/8"
               }`}
             >
               <ArrowRotateLeft
@@ -528,14 +530,20 @@ export default function Header({
           <button
             onClick={toggleTheme}
             className={`flex items-center justify-center w-9 h-9 rounded-full active:scale-95 transition-all ${
-              useBlueSubpageHeader ? "bg-white/15 hover:bg-white/20" : "hover:bg-foreground/8"
+              useBlueSubpageHeader
+                ? "bg-white/15 hover:bg-white/20"
+                : "hover:bg-foreground/8"
             }`}
             aria-label="Toggle theme"
           >
             {isDark ? (
-              <Sun className={`size-[18px] ${useBlueSubpageHeader ? "text-white" : "text-yellow-400"}`} />
+              <Sun
+                className={`size-[18px] ${useBlueSubpageHeader ? "text-white" : "text-yellow-400"}`}
+              />
             ) : (
-              <Moon className={`size-[18px] ${useBlueSubpageHeader ? "text-white" : "text-accent"}`} />
+              <Moon
+                className={`size-[18px] ${useBlueSubpageHeader ? "text-white" : "text-accent"}`}
+              />
             )}
           </button>
 
@@ -572,7 +580,10 @@ export default function Header({
             {/* Menu Header */}
             <div
               className="flex items-center justify-between px-4 py-3 border-b border-border"
-              style={{ background: "linear-gradient(135deg,#2F80EA 0%,#236FDE 48%,#1454C5 100%)" }}
+              style={{
+                background:
+                  "linear-gradient(135deg,#2F80EA 0%,#236FDE 48%,#1454C5 100%)",
+              }}
             >
               <span className="text-white font-bold text-[14px]">
                 Reporting Menu
