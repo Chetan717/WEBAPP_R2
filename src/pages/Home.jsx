@@ -279,7 +279,7 @@ function HomeHero({ onSearchClick, compact }) {
 
   return (
     <header
-      className={`sticky  top-0 z-40 overflow-hidden bg-[#2F80EA] text-white shadow-[0_5px_18px_rgba(26,75,148,0.10)] transition-all duration-200 ${
+      className={`sticky  top-0 z-40 overflow-hidden bg-[#2F80EA] text-white  transition-all duration-200 ${
         compact ? "px-2 pb-3 pt-3" : "px-2 pb-4 pt-4"
       } md:px-4`}
     >
