@@ -284,7 +284,7 @@ function HomeHero({ onSearchClick, compact }) {
       } md:px-4`}
     >
       <div className="pointer-events-none absolute -left-16 top-10 h-44 w-44 rounded-full" />
-      <div className="pointer-events-none absolute -right-14 -top-20 h-48 w-48 rounded-full bg-[#0B52C7]/25" />
+      <div className="pointer-events-none absolute -right-14 -top-20 h-48 w-48 rounded-full" />
 
       <div className="relative mx-auto w-full max-w-7xl">
         <div className={`flex items-center ${compact ? "gap-2" : "gap-2.5"}`}>
