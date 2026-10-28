@@ -283,7 +283,7 @@ function HomeHero({ onSearchClick, compact }) {
         compact ? "px-2 pb-3 pt-3" : "px-2 pb-4 pt-4"
       } md:px-4`}
     >
-      <div className="pointer-events-none absolute -left-16 top-10 h-44 w-44 rounded-full bg-white/[0.045]" />
+      <div className="pointer-events-none absolute -left-16 top-10 h-44 w-44 rounded-full" />
       <div className="pointer-events-none absolute -right-14 -top-20 h-48 w-48 rounded-full bg-[#0B52C7]/25" />
 
       <div className="relative mx-auto w-full max-w-7xl">
