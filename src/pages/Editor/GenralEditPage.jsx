@@ -1157,7 +1157,7 @@ function GeneralEditPage({
                 : isWelcome
                   ? 215
                   : isBonanza
-                    ? 200
+                    ? 195
                     : isRank_B
                       ? 215
                       : isRank
