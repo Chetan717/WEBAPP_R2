@@ -188,10 +188,10 @@ test("BiRefNet preprocessing/output policy preserves soft alpha and safe resolut
   assert.ok(Math.abs(large.width / large.height - 4 / 3) < 0.01);
 });
 
-test("the bundled ONNX Runtime WASM is complete, versioned, and not truncated", () => {
+test("the R2 upload ONNX Runtime WASM is complete, versioned, and not truncated", () => {
   const runtimePath = join(
     projectRoot,
-    "public/modnet/ort-wasm-simd-threaded.wasm",
+    "r2-upload/ort/1.21.0/ort-wasm-simd-threaded.wasm",
   );
   const runtime = readFileSync(runtimePath);
   const modnet = read("src/pages/mainform/utils/modnetBg.js");

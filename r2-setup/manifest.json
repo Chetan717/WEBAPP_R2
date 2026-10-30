@@ -1,0 +1,30 @@
+{
+  "onnxRuntimeVersion": "1.21.0",
+  "baseUrl": "https://models.mlmposter.com/",
+  "assets": [
+    {
+      "key": "modnet/modnet.onnx",
+      "file": "r2-upload/modnet/modnet.onnx",
+      "size": 25888640,
+      "sha256": "07c308cf0fc7e6e8b2065a12ed7fc07e1de8febb7dc7839d7b7f15dd66584df9",
+      "contentType": "application/octet-stream",
+      "cacheControl": "public, max-age=31536000, immutable"
+    },
+    {
+      "key": "ort/1.21.0/ort-wasm-simd-threaded.wasm",
+      "file": "r2-upload/ort/1.21.0/ort-wasm-simd-threaded.wasm",
+      "size": 12666427,
+      "sha256": "06b3f98e5aa2fffec1e3ac57a48bf1073828c6624e14d210750bc596c2e35d65",
+      "contentType": "application/wasm",
+      "cacheControl": "public, max-age=31536000, immutable"
+    },
+    {
+      "key": "ort/1.21.0/ort-wasm-simd-threaded.jsep.wasm",
+      "file": "r2-upload/ort/1.21.0/ort-wasm-simd-threaded.jsep.wasm",
+      "size": 23914392,
+      "sha256": "0663b902fb3937883a34375926bdfe3e1c86cd4c99cbc04c06a7cdf46c78bdde",
+      "contentType": "application/wasm",
+      "cacheControl": "public, max-age=31536000, immutable"
+    }
+  ]
+}

@@ -19,20 +19,20 @@
       ]
     },
     {
-      "source": "/modnet/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
       "source": "/prcrete.webp",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=2592000, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/ort/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
         }
       ]
     }
@@ -41,6 +41,28 @@
     {
       "source": "/((?!api/).*)",
       "destination": "/"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/modnet/modnet.onnx",
+      "destination": "https://models.mlmposter.com/modnet/modnet.onnx",
+      "permanent": true
+    },
+    {
+      "source": "/modnet/ort-wasm-simd-threaded.wasm",
+      "destination": "https://models.mlmposter.com/ort/1.21.0/ort-wasm-simd-threaded.wasm",
+      "permanent": true
+    },
+    {
+      "source": "/modnet/ort-wasm-simd-threaded.mjs",
+      "destination": "/ort/1.21.0/ort-wasm-simd-threaded.mjs",
+      "permanent": true
+    },
+    {
+      "source": "/modnet_ort-wasm-simd-threaded.mjs",
+      "destination": "/ort/1.21.0/ort-wasm-simd-threaded.mjs",
+      "permanent": true
     }
   ]
 }

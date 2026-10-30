@@ -13,10 +13,11 @@ import {
   decontaminateEdgeColours,
   refineAlphaWithImage,
 } from "./modnetBg.js";
+import { configureR2Runtime } from "./ortR2Runtime.js";
 
 const MODEL_URL =
   import.meta.env.VITE_BIREFNET_MODEL_URL ||
-  "https://huggingface.co/studioludens/birefnet-lite-512/resolve/main/onnx/model_fp16.onnx";
+  "https://models.mlmposter.com/birefnet/model_fp16.onnx";
 const MODEL_CACHE = "mlmlive-birefnet-lite-512-fp16-v1";
 const MODEL_CACHE_KEY = `${MODEL_URL}${MODEL_URL.includes("?") ? "&" : "?"}mlmlive-cache=v1`;
 const INPUT_SIZE = 512;
@@ -286,7 +287,7 @@ async function loadModelBytes(onProgress) {
 async function loadRuntime() {
   if (!runtimePromise) {
     runtimePromise = import("onnxruntime-web/webgpu")
-      .then((module) => module.default || module)
+      .then((module) => configureR2Runtime(module.default || module, "webgpu"))
       .catch((error) => {
         runtimePromise = null;
         throw error;

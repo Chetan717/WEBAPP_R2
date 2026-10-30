@@ -75,18 +75,21 @@ try {
   ort.env.wasm.proxy = false;
   ort.env.wasm.wasmPaths = {
     wasm: new URL(
-      "../public/modnet/ort-wasm-simd-threaded.wasm",
+      "../r2-upload/ort/1.21.0/ort-wasm-simd-threaded.wasm",
       import.meta.url,
     ).href,
     mjs: new URL(
-      "../public/modnet/ort-wasm-simd-threaded.mjs",
+      "../public/ort/1.21.0/ort-wasm-simd-threaded.mjs",
       import.meta.url,
     ).href,
   };
+  ort.env.wasm.wasmBinary = new Uint8Array(readFileSync(join(
+    projectRoot, "r2-upload/ort/1.21.0/ort-wasm-simd-threaded.wasm",
+  )));
 
   const startedSession = performance.now();
   const session = await ort.InferenceSession.create(
-    readFileSync(join(projectRoot, "public/modnet/modnet.onnx")),
+    readFileSync(join(projectRoot, "r2-upload/modnet/modnet.onnx")),
     {
       executionProviders: ["wasm"],
       graphOptimizationLevel: "all",

@@ -3,9 +3,12 @@
  *
  * Unlike MediaPipe Selfie Segmentation, MODNet predicts a continuous alpha
  * matte. That is essential for hair, ears and other soft portrait boundaries.
- * The model and ONNX Runtime assets are served from /public/modnet so Android
- * WebView never needs blob: scripts or a paid/cloud background-removal API.
+ * Model and WASM bytes come directly from R2. Only the small matching JS
+ * loader is same-origin, so Android WebView needs no blob scripts or workers.
  */
+
+import { DEFAULT_MODNET_BASE, resolveModnetModelUrl } from "./aiAssetUrls.js";
+import { configureR2Runtime } from "./ortR2Runtime.js";
 
 let runtimePromise = null;
 let sessionPromise = null;
@@ -51,22 +54,9 @@ function tagEngineError(error, stage, retryable = false) {
   return tagged;
 }
 
-function versionedAssetUrl(base, fileName) {
-  const url = new URL(`${base}${fileName}`, window.location.href);
-  url.searchParams.set("v", MODEL_ASSET_VERSION);
-  if (assetRevision > 0) url.searchParams.set("retry", String(assetRevision));
-  return url.href;
-}
-
-function localAssetUrl(fileName) {
-  const base = `${import.meta.env.BASE_URL}modnet/`;
-  return versionedAssetUrl(base, fileName);
-}
-
 function remoteModelUrl() {
-  const configuredBase = String(import.meta.env.VITE_MODNET_ASSET_BASE_URL || "https://models.mlmposter.com/modnet/model.onnx").trim();
-  if (!configuredBase) return "";
-  return versionedAssetUrl(`${configuredBase.replace(/\/+$/, "")}/`, "modnet.onnx");
+  const configuredBase = String(import.meta.env?.VITE_MODNET_ASSET_BASE_URL || DEFAULT_MODNET_BASE).trim();
+  return resolveModnetModelUrl(configuredBase, MODEL_ASSET_VERSION, assetRevision);
 }
 
 function isMobileRuntime() {
@@ -82,21 +72,9 @@ function isMobileRuntime() {
 async function loadRuntime() {
   if (!runtimePromise) {
     runtimePromise = import("onnxruntime-web/wasm")
-      .then((module) => {
+      .then(async (module) => {
         const ort = module.default || module;
-        // A single WASM thread avoids SharedArrayBuffer/crossOriginIsolated
-        // requirements in React Native WebView. Direct same-origin paths avoid
-        // the blob: CSP failure that the previous engine hit.
-        ort.env.wasm.numThreads = 1;
-        ort.env.wasm.proxy = false;
-        // Keep ORT runtime files same-origin. Some Android Chrome/WebView
-        // versions fail when the WASM/module pair is fetched cross-origin from
-        // R2 even though the ONNX model itself can be fetched there safely.
-        ort.env.wasm.wasmPaths = {
-          wasm: localAssetUrl("ort-wasm-simd-threaded.wasm"),
-          mjs: localAssetUrl("ort-wasm-simd-threaded.mjs"),
-        };
-        return ort;
+        return configureR2Runtime(ort, "wasm");
       })
       .catch((error) => {
         runtimePromise = null;
@@ -110,9 +88,8 @@ async function fetchModel(onProgress) {
   const cacheMode = forceFreshModelFetch ? "reload" : "force-cache";
   forceFreshModelFetch = false;
 
-  // Prefer the R2 model to keep normal bandwidth off Vercel, but always keep
-  // the bundled same-origin model as a zero-configuration mobile fallback.
-  const candidates = [remoteModelUrl(), localAssetUrl("modnet.onnx")].filter(Boolean);
+  // R2 only: a CDN problem must never silently download 26 MB from Vercel.
+  const candidates = [remoteModelUrl()];
   let lastError = null;
   let response = null;
 

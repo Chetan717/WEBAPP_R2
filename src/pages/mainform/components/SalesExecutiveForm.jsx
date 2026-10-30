@@ -82,21 +82,7 @@ import {
   RANK_PROMOTION_TYPES,
 } from "../../../utils/templateTypeConfig";
 import GeneralEditPage from "../../Editor/GenralEditPage";
-
-import Bike from "../formshow/BIKE.webp";
-import CarPurchase from "../formshow/CAR PURCHASE.webp";
-import Car from "../formshow/CAR.webp";
-import Birthday from "../formshow/birthday.webp";
-import Capping from "../formshow/capping.webp";
-import GiftOther from "../formshow/GIFT other.webp";
-import Incomee from "../formshow/incomee.webp";
-import Laptop from "../formshow/LAPTOP.webp";
-import MeetingImage from "../formshow/meeting.webp";
-import Mobile from "../formshow/mobile.webp";
 import Rank from "../formshow/rank.webp";
-import Closing from "../formshow/closing.webp";
-import Welcome from "../formshow/welcome.webp";
-
 const storage = getStorage(app);
 const RANK_PROMOTION_FORM_IMAGES = Object.freeze(
   Object.fromEntries(RANK_PROMOTION_TYPES.map((type) => [type, Rank])),
@@ -474,30 +460,7 @@ export default function SalesExecutiveForm() {
   const isMeeting = selll?.type === "Meeting" || selll?.type === "General_Meeting";
   const isBonanza = isBonanzaFlowType(selll?.type);
   const rankPromotionFormImage = RANK_PROMOTION_FORM_IMAGES[selll?.type];
-  const formImage =
-    selll?.Subtype === "WELCOME"
-      ? Welcome
-      : selll?.Subtype === "CLOSING"
-        ? Closing
-        : selll?.type === "Achievements" && selll?.Subtype === "BIKE"
-          ? Bike
-          : selll?.type === "Achievements" && selll?.Subtype === "CAR"
-            ? Car
-            : selll?.type === "Achievements" && selll?.Subtype === "MOBILE"
-              ? Mobile
-              : selll?.type === "Achievements" && selll?.Subtype === "LAPTOP"
-                ? Laptop
-                : selll?.type === "Achievements"
-                  ? GiftOther
-                  : selll?.type === "Anniversary_Birthday"
-                    ? Birthday
-                    : selll?.type === "Income"
-                      ? Incomee
-                      : selll?.type === "Meeting" || selll?.type === "General_Meeting"
-                        ? MeetingImage
-                        : isBonanzaFlowType(selll?.type)
-                          ? GiftOther
-                          : rankPromotionFormImage || Rank;
+ 
   const formImageLabel = selll?.Subtype;
 
   const maintypelabel = selll?.type;
@@ -561,8 +524,7 @@ export default function SalesExecutiveForm() {
   const initialPreviewImage =
     selectedSuggestionImage ||
     String(selll?.suggestionImage || "").trim() ||
-    selectedShowcaseUrl ||
-    formImage ||
+    selectedShowcaseUrl 
     "";
 
   const markEditingStarted = () => {

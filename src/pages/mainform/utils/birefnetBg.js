@@ -7,6 +7,9 @@
  * that cleanup can erase fine hair, ears and soft shoulder edges.
  */
 
+import { configureR2Runtime } from "./ortR2Runtime.js";
+import { requireRemoteAiUrl } from "./aiAssetUrls.js";
+
 const MODEL_SIZE = 512;
 const MODEL_CACHE_NAME = "mlmlive-ai-models-v3";
 const MODEL_CACHE_VERSION = "birefnet-lite-512-fp16-2026-10-09-v1";
@@ -56,7 +59,7 @@ function tagEngineError(error, stage, { retryable = false, unsupported = false }
 export function getBirefNetModelUrl() {
   const configured = String(import.meta.env.VITE_BIREFNET_MODEL_URL || "").trim();
   const base = configured || DEFAULT_MODEL_URL;
-  const url = new URL(base, window.location.href);
+  const url = requireRemoteAiUrl(base);
   // The revision only changes after an explicit retry. Normal loads keep a
   // stable URL so both HTTP cache and Cache Storage can reuse the 94 MB model.
   url.searchParams.set("v", MODEL_CACHE_VERSION);
@@ -112,11 +115,11 @@ export async function getBirefNetCapability() {
 async function loadRuntime() {
   if (!runtimePromise) {
     runtimePromise = import("onnxruntime-web/webgpu")
-      .then((module) => {
+      .then(async (module) => {
         const ort = module.default || module;
         // BiRefNet uses WebGPU only. MODNet owns the WASM fallback path.
         ort.env.logLevel = "warning";
-        return ort;
+        return configureR2Runtime(ort, "webgpu");
       })
       .catch((error) => {
         runtimePromise = null;
