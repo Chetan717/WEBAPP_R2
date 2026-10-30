@@ -1131,8 +1131,8 @@ function GeneralEditPage({
                   : 0
                 : isBonanza
                   ? isRight
-                    ? 180
-                    : 0
+                    ? 170
+                    : -5
                   : isRank_B
                     ? isRight
                       ? 135
@@ -1157,7 +1157,7 @@ function GeneralEditPage({
                 : isWelcome
                   ? 215
                   : isBonanza
-                    ? 195
+                    ? 190
                     : isRank_B
                       ? 215
                       : isRank
@@ -1178,7 +1178,7 @@ function GeneralEditPage({
                 : isClosing
                   ? 150
                   : isBonanza
-                    ? 150
+                    ? 155
                     : isRank_B
                       ? 225
                       : isRank
