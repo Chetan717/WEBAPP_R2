@@ -1163,7 +1163,7 @@ function GeneralEditPage({
                       : isRank
                         ? rankBadgeSize === "big"
                           ? 167
-                          : 217
+                          : 212
                         : 218,
       width: isCapping
         ? 150
