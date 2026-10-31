@@ -51,6 +51,7 @@ import {
   X,
 } from "lucide-react";
 import { getUser, VERIFIED_USER_CHANGED_EVENT } from "../utils/authStorage";
+import { getSupportWhatsAppUrl } from "../utils/marketingSupport.js";
 import { MLM_PROFILE_CHANGED_EVENT } from "../utils/companyStorage";
 import { RANK_PROMOTION_TYPES } from "../utils/templateTypeConfig";
 import { EVERYDAY_MOMENTS_GROUP_KEY } from "../utils/everydayMoments";
@@ -451,6 +452,9 @@ function Home() {
   const [pullDistance, setPullDistance] = useState(0);
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const [homeHeaderCompact, setHomeHeaderCompact] = useState(false);
+  const [supportWhatsAppUrl, setSupportWhatsAppUrl] = useState(() =>
+    getSupportWhatsAppUrl(getUser()),
+  );
   const homeRootRef = useRef(null);
   const loadingRef = useRef(false);
   const groupIndexRef = useRef(cachedGroupIndex);
@@ -462,6 +466,13 @@ function Home() {
   const pullDistanceRef = useRef(0);
   const isPullingRef = useRef(false);
   activeCompanyIdRef.current = companyId;
+
+  useEffect(() => {
+    const syncSupport = () => setSupportWhatsAppUrl(getSupportWhatsAppUrl(getUser()));
+    syncSupport();
+    window.addEventListener(VERIFIED_USER_CHANGED_EVENT, syncSupport);
+    return () => window.removeEventListener(VERIFIED_USER_CHANGED_EVENT, syncSupport);
+  }, []);
 
   const loadTemplates = useCallback(async () => {
     if (
@@ -806,7 +817,7 @@ function Home() {
       />
 
       <a
-        href="https://wa.me/919341947815"
+        href={supportWhatsAppUrl}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Contact customer care on WhatsApp"

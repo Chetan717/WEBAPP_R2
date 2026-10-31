@@ -17,7 +17,7 @@ function collectSourceFiles(directory) {
   });
 }
 
-test("all customer-care actions use the new support number", () => {
+test("other customer-care actions retain the support number and Home uses coupon routing", () => {
   const countryNumber = "919341947815";
   const dialNumber = `+${countryNumber}`;
 
@@ -26,7 +26,6 @@ test("all customer-care actions use the new support number", () => {
   assert.match(settings, new RegExp(`https://wa\\.me/${countryNumber}`));
 
   for (const relativePath of [
-    "src/pages/Home.jsx",
     "src/pages/SelectCompany/SelectComp.jsx",
     "src/components/Sidebar.jsx",
     "src/components-source/Sidebar.jsx",
@@ -37,6 +36,7 @@ test("all customer-care actions use the new support number", () => {
       `${relativePath} does not use the current support WhatsApp number`,
     );
   }
+  assert.match(read("src/pages/Home.jsx"), /href=\{supportWhatsAppUrl\}/);
 });
 
 test("legacy support number is absent from executable source", () => {
