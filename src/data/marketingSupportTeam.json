@@ -1,9 +1,5 @@
 [
-  { "mobile": "9304638203", "coupon_code": "MLM909" },
   { "mobile": "9341947815", "coupon_code": "MLM100" },
-  { "mobile": "9876516549", "coupon_code": "RAM200" },
-  { "mobile": "7058838221", "coupon_code": "WELCOM" },
-  { "mobile": "7808030050", "coupon_code": "MLM300" },
-  { "mobile": "8657173938", "coupon_code": "MLM400" },
-  { "mobile": "8409353081", "coupon_code": "MLM200" }
+
+  { "mobile": "7058838221", "coupon_code": "WELCOM" }
 ]
