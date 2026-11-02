@@ -78,29 +78,13 @@ import useResilientCanvasImage, {
 import { getProfileReadCandidates } from "../../utils/profileR2Urls";
 import FlipTapHint from "./components/FlipTapHint";
 import { getFlipHintPosition } from "./utils/flipHintGeometry";
+import { getTopUplineHeadCrop } from "./utils/topUplineCrop";
+import { getBottomFeatheredProfilePhoto } from "./utils/profilePhotoFeather";
 
 const fs = (n) => n;
 
 const STAGE_WIDTH = 320;
 const STAGE_HEIGHT = 320;
-
-const getPortraitFriendlySquareCrop = (image) => {
-  if (!image) return undefined;
-
-  const sourceWidth =
-    image.naturalWidth || image.videoWidth || image.width || 1;
-  const sourceHeight =
-    image.naturalHeight || image.videoHeight || image.height || 1;
-  const cropSize = Math.min(sourceWidth, sourceHeight);
-
-  return {
-    x: Math.max(0, (sourceWidth - cropSize) / 2),
-    // Keep portrait faces slightly above centre instead of cutting the head.
-    y: Math.max(0, (sourceHeight - cropSize) * 0.22),
-    width: cropSize,
-    height: cropSize,
-  };
-};
 
 const readStoredJson = (storageType, key) => {
   if (typeof window === "undefined") return null;
@@ -1913,6 +1897,10 @@ function GeneralEditPage({
     ],
   );
   const [ImageProfile] = useResilientCanvasImage(profileImageSources);
+  const renderedProfileImage = useMemo(
+    () => getBottomFeatheredProfilePhoto(ImageProfile, Template_Type),
+    [ImageProfile, Template_Type],
+  );
 
   useEffect(() => {
     if (!ImageProfile) return undefined;
@@ -3273,7 +3261,7 @@ function GeneralEditPage({
                                       y={GURU_SLOT_PADDING}
                                       width={GURU_INNER_SIZE}
                                       height={GURU_INNER_SIZE}
-                                      crop={getPortraitFriendlySquareCrop(
+                                      crop={getTopUplineHeadCrop(
                                         slot.img,
                                       )}
                                       onTap={() => setIsOpen(true)}
@@ -3335,6 +3323,7 @@ function GeneralEditPage({
                                 y={SLOT_PADDING}
                                 width={INNER_SIZE}
                                 height={INNER_SIZE}
+                                crop={getTopUplineHeadCrop(slot.img)}
                                 onTap={() => setIsOpen(true)}
                                 onClick={() => setIsOpen(true)}
                               />
@@ -3517,7 +3506,7 @@ function GeneralEditPage({
                 {isSubGeneralType ? (
                   <Image
                     ref={profileImageRef}
-                    image={ImageProfile}
+                    image={renderedProfileImage}
                     x={isRight ? 190 : -10}
                     y={56}
                     width={175}
@@ -4103,7 +4092,7 @@ function GeneralEditPage({
                       return (
                         <Image
                           ref={profileImageRef}
-                          image={ImageProfile}
+                          image={renderedProfileImage}
                           x={leftEdge}
                           y={fY}
                           scaleX={curScaleX}

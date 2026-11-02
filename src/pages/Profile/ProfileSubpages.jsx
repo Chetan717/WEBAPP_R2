@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
   LockKeyhole,
   Star,
   UserRoundX,
+  Building2,
   LogOut,
   Headphones,
   Phone,
@@ -25,6 +26,14 @@ import {
 } from "../../utils/bannerSettingsNavigation";
 import { changePin, getAuthErrorMessage } from "../../services/authService";
 import { getUser } from "../../utils/authStorage";
+import { getMlmProfileFromStorage } from "../../utils/companyStorage";
+import { useSelectedCompany } from "../../Context/SelectedCompanyContext";
+import { createProfileDeletedNavigationState } from "../../utils/profileDeletionNavigation";
+import {
+  DELETE_COMPANY_PROFILE_PATH,
+  canConfirmCompanyProfileDeletion,
+  confirmCompanyProfileDeletion,
+} from "../../utils/companyProfileDeletion";
 import DeleteAcc from "./utils/DeleteAcc";
 
 const SUPPORT_PHONE = "+919341947815";
@@ -61,7 +70,7 @@ function Divider() {
   return <div className="ml-12 h-px bg-[#e7eaf0]" />;
 }
 
-function SettingsRow({ icon: Icon, label, onClick, danger = false }) {
+function SettingsRow({ icon: Icon, label, description, onClick, danger = false }) {
   return (
     <button
       type="button"
@@ -69,7 +78,10 @@ function SettingsRow({ icon: Icon, label, onClick, danger = false }) {
       className={`flex w-full items-center gap-4 px-5 py-[18px] text-left active:bg-[#f7f9fc] ${danger ? "text-[#ef2f36]" : "text-[#202634] dark:text-[#f5f7fb]"}`}
     >
       <Icon className={`h-5 w-5 flex-shrink-0 ${danger ? "text-[#ef2f36]" : "text-[#667085] dark:text-[#b6c0d1]"}`} strokeWidth={1.9} />
-      <span className="flex-1 text-[16px] font-medium">{label}</span>
+      <span className="flex-1 text-[16px] font-medium">
+        {label}
+        {description && <span className="mt-1 block text-[12px] font-normal leading-5 text-[#667085] dark:text-[#b6c0d1]">{description}</span>}
+      </span>
       <ChevronRight className={`h-5 w-5 ${danger ? "text-[#ef2f36]" : "text-[#98a2b3] dark:text-[#8995aa]"}`} strokeWidth={2} />
     </button>
   );
@@ -137,7 +149,9 @@ export function SettingsSupportPage() {
 
         <SectionTitle>Account</SectionTitle>
         <SettingsCard>
-          <SettingsRow icon={UserRoundX} label={t("Delete my account")} onClick={() => navigate("/profile/delete-account")} danger />
+          <SettingsRow icon={Building2} label={t("Delete My Company Profile")} description={t("Deletes only your company profile. Your MLMLIVE account stays active.")} onClick={() => navigate(DELETE_COMPANY_PROFILE_PATH)} danger />
+          <Divider />
+          <SettingsRow icon={UserRoundX} label={t("Delete my account")} description={t("Permanently deletes your MLMLIVE account and associated data.")} onClick={() => navigate("/profile/delete-account")} danger />
         </SettingsCard>
 
         <button
@@ -356,6 +370,90 @@ export function ChangePinPage() {
   );
 }
 
+export function DeleteCompanyProfilePage() {
+  const navigate = useNavigate();
+  const { t } = useAppLanguage();
+  const { deleteProfileAndCompanySelection } = useSelectedCompany();
+  const [confirmation, setConfirmation] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+  const deletingRef = useRef(false);
+  const profile = getMlmProfileFromStorage();
+  const profileId = profile?.id || "";
+  const mobile = getUser()?.mobileNo || profile?.mobile || profile?.mobileNo || "";
+  const canConfirm = canConfirmCompanyProfileDeletion({ profileId, mobile, confirmation });
+
+  const handleDelete = async (event) => {
+    event.preventDefault();
+    if (deletingRef.current || !canConfirm) return;
+    deletingRef.current = true;
+    setDeleting(true);
+    setError("");
+    try {
+      await confirmCompanyProfileDeletion({
+        profileId, mobile, confirmation,
+        deleteProfile: deleteProfileAndCompanySelection,
+      });
+      toast.success(t("Company profile deleted successfully."));
+      navigate("/selectcomp", {
+        replace: true,
+        state: createProfileDeletedNavigationState(),
+      });
+    } catch {
+      setError(t("Failed to delete company profile. Please try again."));
+      setDeleting(false);
+    } finally {
+      deletingRef.current = false;
+    }
+  };
+
+  return (
+    <div className="flex min-h-[100dvh] flex-col bg-[#f5f6fa] dark:bg-[#0f1420]">
+      <ProfileHeader title={t("Delete My Company Profile")} onBack={() => { if (!deleting) navigate("/profile"); }} />
+      <form onSubmit={handleDelete} className="flex flex-1 flex-col" aria-busy={deleting}>
+        <div className="flex-1 space-y-4 px-4 py-4">
+          <div className="rounded-[22px] bg-[#fff0f1] px-4 py-4 dark:bg-red-500/10">
+            <div className="mb-3 flex items-center gap-2 text-[14px] font-semibold text-[#ef2f36]">
+              <Building2 className="h-5 w-5 shrink-0" />
+              {t("This cannot be undone")}
+            </div>
+            <ul className="list-disc space-y-2 pl-5 text-[14px] leading-6 text-[#667085] dark:text-[#b6c0d1]">
+              <li>{t("Your company profile and its saved banner details will be permanently deleted.")}</li>
+              <li>{t("Your MLMLIVE account, login and referral credits will remain.")}</li>
+              <li>{t("You will need to select a company and create a new company profile.")}</li>
+              <li>{t("Downloads already saved to your gallery stay")}</li>
+            </ul>
+          </div>
+          <div className="rounded-[18px] bg-[#e8f2ff] px-4 py-4 text-[13px] leading-6 text-[#36577c] dark:bg-blue-500/10 dark:text-blue-200">
+            {t("To close your MLMLIVE account completely, use Delete my account.")}
+          </div>
+          {profileId ? (
+            <div className="rounded-[20px] bg-white px-4 py-4 dark:bg-[#171e2d]">
+              <label htmlFor="company-profile-delete-mobile" className="mb-2 block text-[13px] font-semibold text-[#202634] dark:text-[#f5f7fb]">
+                {t("Enter your registered mobile number to confirm.")}
+              </label>
+              <input id="company-profile-delete-mobile" type="tel" inputMode="numeric" autoComplete="off" maxLength={10}
+                value={confirmation} disabled={deleting}
+                onChange={(event) => { setConfirmation(event.target.value.replace(/\D/g, "").slice(0, 10)); setError(""); }}
+                className="h-12 w-full rounded-xl border border-[#d7ddea] bg-transparent px-3 text-[16px] text-[#202634] outline-none focus:border-[#ef2f36] dark:border-white/20 dark:text-[#f5f7fb]"
+              />
+            </div>
+          ) : (
+            <p role="status" className="rounded-[18px] bg-white px-4 py-4 text-[14px] text-[#667085] dark:bg-[#171e2d] dark:text-[#b6c0d1]">{t("No company profile is available to delete.")}</p>
+          )}
+          {error && <p role="alert" className="text-[13px] text-[#ef2f36]">{error}</p>}
+        </div>
+        <div className="sticky bottom-0 space-y-2 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+14px)] pt-3 backdrop-blur dark:bg-[#171e2d]/95">
+          <button type="submit" disabled={!canConfirm || deleting} className="min-h-14 w-full rounded-[14px] bg-[#ef2f36] px-3 py-3 text-[15px] font-semibold text-white disabled:opacity-40">
+            {deleting ? t("Deleting...") : t("Delete My Company Profile")}
+          </button>
+          <button type="button" disabled={deleting} onClick={() => navigate("/profile")} className="h-12 w-full rounded-[14px] border border-[#cbd3e2] text-[14px] font-semibold text-[#202634] disabled:opacity-50 dark:text-[#f5f7fb]">{t("Cancel")}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export function DeleteAccountPage() {
   const navigate = useNavigate();
   const { t } = useAppLanguage();
@@ -374,6 +472,10 @@ export function DeleteAccountPage() {
       <DeleteAcc show={confirmOpen} setDeleteAcc={setConfirmOpen} />
       <ProfileHeader title={t("Delete my account")} onBack={() => navigate("/profile/settings")} />
       <div className="flex-1 px-4 pt-4">
+        <div className="mb-4 rounded-[18px] bg-[#e8f2ff] px-4 py-4 text-[13px] leading-6 text-[#36577c] dark:bg-blue-500/10 dark:text-blue-200">
+          <p>{t("To keep your MLMLIVE account and delete only the company profile, choose Delete My Company Profile.")}</p>
+          <button type="button" onClick={() => navigate(DELETE_COMPANY_PROFILE_PATH)} className="mt-2 font-semibold underline underline-offset-4">{t("Delete My Company Profile")}</button>
+        </div>
         <div className="rounded-[22px] bg-[#fae9ec] px-4 py-4 text-[#667085] dark:text-[#b6c0d1]">
           <div className="mb-2 flex items-center gap-2 text-[14px] font-semibold text-[#ef2f36]">
             <UserRoundX className="h-5 w-5" />

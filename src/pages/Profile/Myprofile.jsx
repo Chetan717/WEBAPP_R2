@@ -22,6 +22,7 @@ import {
   LockKeyhole,
   Star,
   UserRoundX,
+  Building2,
   LogOut,
   Share2,
 } from "lucide-react";
@@ -45,9 +46,11 @@ import {
   ChangePinPage,
   CustomerCarePage,
   DeleteAccountPage,
+  DeleteCompanyProfilePage,
   FeedbackPage,
   LanguagePage,
 } from "./ProfileSubpages";
+import { DELETE_COMPANY_PROFILE_PATH } from "../../utils/companyProfileDeletion";
 
 const hasCompanyProfile = (profile) =>
   !!(
@@ -83,7 +86,7 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-function MainRow({ icon: Icon, label, onClick, rightContent, danger = false }) {
+function MainRow({ icon: Icon, label, description, onClick, rightContent, danger = false }) {
   return (
     <button
       type="button"
@@ -98,7 +101,10 @@ function MainRow({ icon: Icon, label, onClick, rightContent, danger = false }) {
         }`}
         strokeWidth={1.9}
       />
-      <span className="flex-1 text-[15px] font-medium">{label}</span>
+      <span className="flex-1 text-[15px] font-medium">
+        {label}
+        {description && <span className="mt-1 block text-[12px] font-normal leading-5 text-[#667085] dark:text-[#b6c0d1]">{description}</span>}
+      </span>
       {rightContent || (
         <ChevronRight
           className={`h-5 w-5 ${danger ? "text-[#ef2f36]" : "text-[#2877e9]/70"}`}
@@ -407,8 +413,17 @@ function MainProfileView({
           <SectionTitle>{t("Account")}</SectionTitle>
           <div className="overflow-hidden rounded-[22px] bg-white dark:bg-[#171e2d]">
             <MainRow
+              icon={Building2}
+              label={t("Delete My Company Profile")}
+              description={t("Deletes only your company profile. Your MLMLIVE account stays active.")}
+              onClick={() => navigate(DELETE_COMPANY_PROFILE_PATH)}
+              danger
+            />
+            <div className="ml-12 h-px bg-[#e7eaf0] dark:bg-white/10" />
+            <MainRow
               icon={UserRoundX}
               label={t("Delete my account")}
+              description={t("Permanently deletes your MLMLIVE account and associated data.")}
               onClick={() => navigate("/profile/delete-account")}
               danger
             />
@@ -494,6 +509,7 @@ function Myprofile() {
   if (location.pathname === "/profile/settings") return <Navigate to="/profile" replace />;
   if (location.pathname === "/profile/language") return <LanguagePage />;
   if (location.pathname === "/profile/change-pin") return <ChangePinPage />;
+  if (location.pathname === DELETE_COMPANY_PROFILE_PATH) return <DeleteCompanyProfilePage />;
   if (location.pathname === "/profile/delete-account") return <DeleteAccountPage />;
   if (location.pathname === "/profile/feedback") return <FeedbackPage />;
   if (location.pathname === "/profile/customer-care") return <CustomerCarePage />;

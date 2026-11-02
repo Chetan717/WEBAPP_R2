@@ -644,13 +644,18 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
 
   const renderGroupTemplates = (group, displayName) => {
     const isCapping = group?.type === "Capping";
+    const istodaytrending = group?.type === "Today_Trending";
     const items = isCapping
       ? (group.templates || []).slice(0, 1)
       : group.templates || [];
+    const fillRow = items.length <= 2;
+    const isWideCard = items.length === 1;
 
     return (
       <div className="-mx-1.5 overflow-x-auto scroll-smooth snap-x snap-mandatory px-1.5 pb-2 hide-scrollbar scroll-gpu md:-mx-3 md:px-3">
-        <div className="flex w-max min-w-full gap-3 pr-1.5">
+        <div className={fillRow
+          ? `grid w-full min-w-0 gap-3 ${isWideCard ? "grid-cols-1" : "grid-cols-2"}`
+          : "flex w-max min-w-full gap-3 pr-1.5"}>
           {items.map((item) => {
             const cardLabel = item?.Subtype || displayName;
             return (
@@ -658,11 +663,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                 key={item.id}
                 type="button"
                 onClick={() => handleImagePress(item)}
-                className={`${
-                  isCapping
-                    ? "w-[calc(100vw-15px)] min-w-full max-w-[420px]"
-                    : "w-[118px]"
-                } 
+                className={`${fillRow ? "w-full min-w-0" : "w-[118px]"} 
                   shrink-0 snap-start overflow-hidden rounded-[15px] border bg-white text-center shadow-[0_4px_14px_rgba(28,54,92,0.08)] transition-transform duration-150 active:scale-[0.985] dark:bg-[#111827] ${
                     selectedTemp?.id === item?.id
                       ? "border-[#2F80EA] ring-2 ring-[#2F80EA]/20"
@@ -671,15 +672,15 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
               >
                 <div
                   className={`relative w-full overflow-hidden bg-[#EAF1FB] dark:bg-[#172235] ${
-                    isCapping ? "aspect-[14/7]" : "aspect-square"
+                    isWideCard ? "aspect-[14/7]" : "aspect-square"
                   }`}
                 >
                   {item?.image ? (
                     <ImageWithSkeleton
-                      src={item.image}
+                      src={istodaytrending ? item?.ShowCaseForm : item.image}
                       className={`${
-                        isCapping
-                          ? "h-full w-full object-cover"
+                        isWideCard
+                          ? "h-full w-full object-contain"
                           : "h-full w-full object-cover"
                       }`}
                       alt={cardLabel}
@@ -693,7 +694,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                 </div>
 
                 <div
-                  className={`flex items-center ${isCapping ? "h-[30px] px-3" : "h-[27px] px-2"}`}
+                  className={`flex items-center ${isWideCard ? "h-[30px] px-3" : "h-[27px] px-2"}`}
                 >
                   <AutoScrollCardLabel label={cardLabel} />
                 </div>
