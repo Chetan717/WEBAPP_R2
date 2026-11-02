@@ -644,7 +644,6 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
 
   const renderGroupTemplates = (group, displayName) => {
     const isCapping = group?.type === "Capping";
-    const istodaytrending = group?.type === "Today_Trending";
     const items = isCapping
       ? (group.templates || []).slice(0, 1)
       : group.templates || [];
@@ -663,7 +662,11 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                 key={item.id}
                 type="button"
                 onClick={() => handleImagePress(item)}
-                className={`${fillRow ? "w-full min-w-0" : "w-[118px]"} 
+                className={`${
+                  fillRow
+                    ? "w-full min-w-0"
+                    : "w-[118px]"
+                } 
                   shrink-0 snap-start overflow-hidden rounded-[15px] border bg-white text-center shadow-[0_4px_14px_rgba(28,54,92,0.08)] transition-transform duration-150 active:scale-[0.985] dark:bg-[#111827] ${
                     selectedTemp?.id === item?.id
                       ? "border-[#2F80EA] ring-2 ring-[#2F80EA]/20"
@@ -677,7 +680,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                 >
                   {item?.image ? (
                     <ImageWithSkeleton
-                      src={istodaytrending ? item?.ShowCaseForm : item.image}
+                      src={item.image}
                       className={`${
                         isWideCard
                           ? "h-full w-full object-cover"

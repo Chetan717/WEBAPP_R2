@@ -5239,15 +5239,20 @@ function GeneralEditPage({
                   </div>
                 </div>
 
-                <div className="flex gap-2 overflow-x-auto px-4 pb-4 hide-scrollbar">
+                <div
+                  role="group"
+                  aria-label="Music categories"
+                  className="flex w-full min-w-0 shrink-0 items-center gap-2 overflow-x-auto overflow-y-hidden px-4 pb-4 hide-scrollbar"
+                >
                   {audioCategoryOptions.map((option) => {
                     const active = audioCategory === option.key;
                     return (
                       <button
                         key={option.key}
                         type="button"
+                        aria-pressed={active}
                         onClick={() => setAudioCategory(option.key)}
-                        className={`whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-medium transition-colors ${
+                        className={`inline-flex h-10 min-w-[64px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 text-[13px] font-medium leading-none transition-colors ${
                           active
                             ? "border-[#2F80EA] bg-[#2F80EA] text-white"
                             : "border-[#d7ddeb] dark:border-[#2d3a50] bg-white dark:bg-[#1b2536] text-[#667085] dark:text-[#b9c5d8]"
