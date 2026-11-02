@@ -12,17 +12,20 @@ test("crop and remove-background flow uses the Home blue theme with clear proces
   const removeBg = read("src/pages/mainform/components/RemoveBgLoadingOverlay.jsx");
   const uploadLoader = read("src/components/DeviceImageUploadLoader.jsx");
 
-  for (const source of [crop, profileCrop, removeBg, uploadLoader]) {
+  const layout = read("src/components/CropEditorLayout.jsx");
+  for (const source of [crop, profileCrop]) assert.match(source, /CropEditorLayout/);
+
+  for (const source of [layout, removeBg, uploadLoader]) {
     assert.match(source, /#2F80EA/);
     assert.match(source, /#236FDE/);
     assert.match(source, /#1454C5/);
     assert.doesNotMatch(source, /#f97316|#ea580c/i);
   }
 
-  assert.match(crop, /"Preparing…"/);
-  assert.match(crop, /crop-editor-spin/);
-  assert.match(crop, /`Saving \$\{encodeProgress\}%`/);
-  assert.doesNotMatch(crop, /Loading photo…/);
+  assert.match(layout, /crop-editor-spin/);
+  assert.match(layout, /`Saving \$\{progress\}%`/);
+  assert.match(layout, /<footer[\s\S]*"Done"/);
+  assert.doesNotMatch(layout, /Continue|type="range"|>Reset<|>Face<|>Zoom</);
   assert.match(removeBg, /Remove Background/);
   assert.match(removeBg, /Processing/);
 });

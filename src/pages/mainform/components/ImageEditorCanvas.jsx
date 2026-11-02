@@ -1,3 +1,5 @@
+import CropEditorLayout from "../../../components/CropEditorLayout";
+import { CROP_GUTTER, getCropViewportSize, getTopAlignedCropBox, hitCropHandle, resizeCropEdge, drawCropFrame, getCropExportSize } from "../../../utils/cropEditorGeometry";
 import { encodeCropCanvas } from "../../../utils/cropCanvasEncoder";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "@heroui/react";
@@ -28,37 +30,14 @@ function getTouchDist(touches) {
 }
 
 // ── Crop box helpers ──────────────────────────────────────────────
-const HANDLE_HIT = 36; // invisible, large finger-friendly resize target
 const MIN_BOX_W = 60;
 
 function initBox(cw, ch, ratio) {
-  const M = 0.88;
-  let w = cw * M,
-    h = w / ratio;
-  if (h > ch * M) {
-    h = ch * M;
-    w = h * ratio;
-  }
-  // Anchor the crop box to the bottom of the canvas (to match the image,
-  // which is also bottom-aligned — see rebuildOffscreen) so the box never
-  // starts out covering the blank space above the image.
-  return { x: (cw - w) / 2, y: ch - h, w, h };
+  return getTopAlignedCropBox({ x: CROP_GUTTER, y: CROP_GUTTER, w: Math.max(1, cw - CROP_GUTTER * 2), h: Math.max(1, ch - CROP_GUTTER * 2) }, ratio);
 }
 
 function initBoxInBounds(bounds, ratio) {
-  const margin = 0.92;
-  let w = bounds.w * margin;
-  let h = w / ratio;
-  if (h > bounds.h * margin) {
-    h = bounds.h * margin;
-    w = h * ratio;
-  }
-  return {
-    x: bounds.x + (bounds.w - w) / 2,
-    y: bounds.y + (bounds.h - h) / 2,
-    w,
-    h,
-  };
+  return getTopAlignedCropBox(bounds, ratio);
 }
 
 // corner config: anchor getter + sign of drag direction
@@ -70,16 +49,7 @@ const CORNERS = {
 };
 
 function hitCorner(px, py, box) {
-  const half = HANDLE_HIT / 2;
-  const pts = {
-    TL: [box.x, box.y],
-    TR: [box.x + box.w, box.y],
-    BL: [box.x, box.y + box.h],
-    BR: [box.x + box.w, box.y + box.h],
-  };
-  for (const [n, [cx, cy]] of Object.entries(pts))
-    if (Math.abs(px - cx) <= half && Math.abs(py - cy) <= half) return n;
-  return null;
+  return hitCropHandle(px, py, box);
 }
 
 function insideBox(px, py, box) {
@@ -146,12 +116,12 @@ export default function ImageEditorCanvas({
   const [currentSrc, setCurrentSrc] = useState(src);
   const [isDoing, setIsDoing] = useState(false);
   const [isImageReady, setIsImageReady] = useState(false);
+  const [isViewportReady, setIsViewportReady] = useState(false);
   const [encodeProgress, setEncodeProgress] = useState(0);
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [flipH, setFlipH] = useState(false);
   const [flipV, setFlipV] = useState(false);
-  const [tab, setTab] = useState("crop");
   const [enhance, setEnhance] = useState(() => (enableEnhance ? 65 : 0));
   const [skinTone, setSkinTone] = useState(0);
 
@@ -268,12 +238,14 @@ export default function ImageEditorCanvas({
   useEffect(() => {
     const measure = () => {
       if (!containerRef.current) return;
-      const { width } = containerRef.current.getBoundingClientRect();
-      const cw = Math.max(160, Math.min(width - 48, 360)); // 24px safe gutter on mobile
-      const ch = Math.min(Math.round(cw / RATIO), 400);
+      const { width, height } = containerRef.current.getBoundingClientRect();
+      const size = getCropViewportSize(width, height);
+      setIsViewportReady(Boolean(size));
+      if (!size) return;
+      const { w: cw, h: ch } = size;
       if (cw !== canvasSzRef.current.w || ch !== canvasSzRef.current.h) {
         canvasSzRef.current = { w: cw, h: ch };
-        cropBoxRef.current = initBox(cw, ch, RATIO);
+        cropBoxRef.current = initialCropBox(imgRef.current, cw, ch);
         offDirtyRef.current = true;
         setCanvasW(cw);
         setCanvasH(ch);
@@ -290,12 +262,12 @@ export default function ImageEditorCanvas({
     const rot90 = rot % 180 !== 0;
     const bw = rot90 ? ch : cw,
       bh = rot90 ? cw : ch;
-    const { dw, dh } = containDims(img.naturalWidth, img.naturalHeight, bw, bh);
+    const { dw, dh } = containDims(img.naturalWidth, img.naturalHeight, Math.max(1, bw - CROP_GUTTER * 2), Math.max(1, bh - CROP_GUTTER * 2));
     return { dw: dw * (z / 100), dh: dh * (z / 100) };
   }
 
-  function getCropBounds(img, cw, ch) {
-    if (!constrainCropToImage || !img) return null;
+  function getImageBounds(img, cw, ch) {
+    if (!img) return null;
     const { dw, dh } = imgDims(
       img,
       cw,
@@ -304,19 +276,23 @@ export default function ImageEditorCanvas({
       zoomRef.current,
     );
     const left = (cw - dw) / 2;
-    const top = ch - dh;
-    const x = Math.max(0, left);
-    const y = Math.max(0, top);
+    const top = (ch - dh) / 2;
+    const x = Math.max(CROP_GUTTER, left);
+    const y = Math.max(CROP_GUTTER, top);
     return {
       x,
       y,
-      w: Math.max(1, Math.min(cw, left + dw) - x),
-      h: Math.max(1, Math.min(ch, top + dh) - y),
+      w: Math.max(1, Math.min(cw - CROP_GUTTER, left + dw) - x),
+      h: Math.max(1, Math.min(ch - CROP_GUTTER, top + dh) - y),
     };
   }
 
+  function getCropBounds(img, cw, ch) {
+    return constrainCropToImage ? getImageBounds(img, cw, ch) : null;
+  }
+
   function initialCropBox(img, cw, ch) {
-    const bounds = getCropBounds(img, cw, ch);
+    const bounds = getImageBounds(img, cw, ch);
     return bounds ? initBoxInBounds(bounds, RATIO) : initBox(cw, ch, RATIO);
   }
 
@@ -335,11 +311,7 @@ export default function ImageEditorCanvas({
     ctx.imageSmoothingQuality = "high";
     const { dw, dh } = imgDims(img, cw, ch, rot, z);
     ctx.save();
-    // Anchor image to the bottom of the canvas (instead of vertical center)
-    // so any leftover blank space from a mismatched aspect ratio appears at
-    // the top, where the crop box is never dragged to by default, rather
-    // than at the bottom where users tend to crop.
-    ctx.translate(cw / 2, ch - dh / 2);
+    ctx.translate(cw / 2, ch / 2);
     ctx.rotate((rot * Math.PI) / 180);
     ctx.scale(fH ? -1 : 1, fV ? -1 : 1);
     ctx.filter = buildPhotoEnhanceFilter(
@@ -405,27 +377,7 @@ export default function ImageEditorCanvas({
     ctx.fillRect(0, fy, fx, fh);
     ctx.fillRect(fx + fw, fy, cw - fx - fw, fh);
 
-    // Border
-    ctx.strokeStyle = "rgba(255,255,255,0.70)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(fx, fy, fw, fh);
-
-    // Grid lines
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
-    ctx.lineWidth = 0.7;
-    for (let i = 1; i < 3; i++) {
-      ctx.beginPath();
-      ctx.moveTo(fx + (fw / 3) * i, fy);
-      ctx.lineTo(fx + (fw / 3) * i, fy + fh);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(fx, fy + (fh / 3) * i);
-      ctx.lineTo(fx + fw, fy + (fh / 3) * i);
-      ctx.stroke();
-    }
-
-    // Keep only the subtle outline and grid: corner squares/brackets are intentionally hidden.
-    // hitCorner() still uses a 36px invisible touch zone for easy resizing.
+    drawCropFrame(ctx, box, Boolean(dragRef.current));
 
     ctx.restore();
   }, [RATIO]);
@@ -437,86 +389,6 @@ export default function ImageEditorCanvas({
       draw();
     });
   }, [draw]);
-
-  const fitToCrop = useCallback(() => {
-    const img = imgRef.current;
-    if (!img) return;
-    const { w: cw, h: ch } = canvasSzRef.current;
-    const box = cropBoxRef.current || initBox(cw, ch, RATIO);
-    const rot = rotRef.current;
-    const rot90 = rot % 180 !== 0;
-    const bw = rot90 ? ch : cw,
-      bh = rot90 ? cw : ch;
-    const { dw: imgW, dh: imgH } = containDims(
-      img.naturalWidth,
-      img.naturalHeight,
-      bw,
-      bh,
-    );
-    const zoomNeeded = Math.max(box.w / imgW, box.h / imgH) * 100;
-    const newZoom = clamp(Math.ceil(zoomNeeded), 100, 300);
-    zoomRef.current = newZoom;
-    setZoom(newZoom);
-    offDirtyRef.current = true;
-    scheduleDraw();
-  }, [RATIO, scheduleDraw]);
-
-  // ── Auto face detect ──────────────────────────────────────────
-  const autoDetectFace = useCallback(async () => {
-    const img = imgRef.current;
-    if (!img || !("FaceDetector" in window)) return;
-    try {
-      const detector = new window.FaceDetector({
-        maxDetectedFaces: 1,
-        fastMode: true,
-      });
-      const faces = await detector.detect(img);
-      if (!faces.length) return;
-      const face = faces[0].boundingBox;
-      const { w: cw, h: ch } = canvasSzRef.current;
-      const rot = rotRef.current;
-      const rot90 = rot % 180 !== 0;
-      const bw = rot90 ? ch : cw,
-        bh = rot90 ? cw : ch;
-      const { dw, dh } = containDims(
-        img.naturalWidth,
-        img.naturalHeight,
-        bw,
-        bh,
-      );
-      const z = zoomRef.current;
-      const sdw = dw * (z / 100),
-        sdh = dh * (z / 100);
-      // Bottom-aligned, matching rebuildOffscreen's image placement.
-      const imgLeft = (cw - sdw) / 2,
-        imgTop = ch - sdh;
-      const sx = sdw / img.naturalWidth,
-        sy = sdh / img.naturalHeight;
-      const fcx = imgLeft + (face.x + face.width / 2) * sx;
-      const fcy = imgTop + (face.y + face.height / 2) * sy;
-      const fh = face.height * sy;
-      const desiredH = fh * 2.2;
-      const desiredW = desiredH * RATIO;
-      const bounds = getCropBounds(img, cw, ch) || { x: 0, y: 0, w: cw, h: ch };
-      let fw = Math.min(desiredW, bounds.w, bounds.h * RATIO);
-      let fhh = fw / RATIO;
-      let bx = clamp(
-        fcx - fw / 2,
-        bounds.x,
-        bounds.x + bounds.w - fw,
-      );
-      let by = clamp(
-        fcy - fh * 0.1 - fhh / 2,
-        bounds.y,
-        bounds.y + bounds.h - fhh,
-      );
-      if (fw < MIN_BOX_W) return;
-      cropBoxRef.current = { x: bx, y: by, w: fw, h: fhh };
-      scheduleDraw();
-    } catch {
-      /* FaceDetector unavailable or failed — no-op */
-    }
-  }, [RATIO, scheduleDraw]);
 
   // ── Load image ────────────────────────────────────────────────
   useEffect(() => {
@@ -554,7 +426,6 @@ export default function ImageEditorCanvas({
       cropBoxRef.current = initialCropBox(img, cw, ch);
       offDirtyRef.current = true;
       scheduleDraw();
-      setTimeout(autoDetectFace, 80);
     };
 
     img.onload = doLoad;
@@ -579,7 +450,6 @@ export default function ImageEditorCanvas({
     const defaultEnhance = enableEnhance ? 65 : 0;
     enhanceRef.current = defaultEnhance;
     setEnhance(defaultEnhance);
-    setTab(enableEnhance ? "enhance" : "crop");
   }, [enableEnhance, currentSrc]);
 
   useEffect(() => {
@@ -618,6 +488,7 @@ export default function ImageEditorCanvas({
 
   const onDown = (e) => {
     e.preventDefault();
+    if (!isImageReady || !isViewportReady || isDoing) return;
     if (e.touches && e.touches.length >= 2) {
       pinchRef.current = {
         dist: getTouchDist(e.touches),
@@ -630,7 +501,9 @@ export default function ImageEditorCanvas({
     const { px, py } = getPos(e);
     const box = cropBoxRef.current;
     const corner = hitCorner(px, py, box);
-    if (corner) {
+    if (corner && !CORNERS[corner]) {
+      dragRef.current = { mode: "resize-edge", handle: corner, box0: { ...box } };
+    } else if (corner) {
       const { ax, ay, sx, sy } = CORNERS[corner];
       dragRef.current = {
         mode: "resize",
@@ -663,9 +536,11 @@ export default function ImageEditorCanvas({
     if (!dragRef.current) return;
     const { px, py } = getPos(e);
     const { w: cw, h: ch } = canvasSzRef.current;
-    const bounds = getCropBounds(imgRef.current, cw, ch);
+    const bounds = getCropBounds(imgRef.current, cw, ch) || { x: CROP_GUTTER, y: CROP_GUTTER, w: Math.max(1, cw - CROP_GUTTER * 2), h: Math.max(1, ch - CROP_GUTTER * 2) };
     const d = dragRef.current;
-    if (d.mode === "resize") {
+    if (d.mode === "resize-edge") {
+      cropBoxRef.current = resizeCropEdge(d.box0, d.handle, px, py, RATIO, bounds);
+    } else if (d.mode === "resize") {
       cropBoxRef.current = resizeBox(
         px,
         py,
@@ -698,11 +573,12 @@ export default function ImageEditorCanvas({
     pinchRef.current = null;
     dragRef.current = null;
     if (canvasRef.current) canvasRef.current.style.cursor = "grab";
+    scheduleDraw();
   };
 
   // ── Export ────────────────────────────────────────────────────
   const handleDone = () => {
-    if (isDoingRef.current) return;
+    if (isDoingRef.current || !isImageReady || !isViewportReady) return;
     const img = imgRef.current;
     if (!img) {
       toast("Photo is still loading. Please wait a moment.");
@@ -727,19 +603,16 @@ export default function ImageEditorCanvas({
     const { w: cw, h: ch } = canvasSzRef.current;
     const box = cropBoxRef.current || initBox(cw, ch, RATIO);
 
-    const TARGET = 800;
-    const outW = RATIO >= 1 ? TARGET : Math.round(TARGET * RATIO);
-    const outH = RATIO >= 1 ? Math.round(TARGET / RATIO) : TARGET;
+    const { dw, dh } = imgDims(img, cw, ch, rot, z);
+    const nativeLongestSide = Math.max(box.w, box.h) * img.naturalWidth / dw;
+    const { width: outW, height: outH } = getCropExportSize(RATIO, nativeLongestSide, enableEnhance);
     const scale = outW / box.w;
 
-    const { dw, dh } = imgDims(img, cw, ch, rot, z);
     const cropCX = box.x + box.w / 2;
     const cropCY = box.y + box.h / 2;
-    // Match rebuildOffscreen's bottom-aligned image center (cw/2, ch - dh/2)
-    // instead of the canvas center, so the exported crop lines up with what
-    // is actually drawn on screen.
+    // Match the centred preview image exactly when exporting.
     const imgCX = outW / 2 + (cw / 2 - cropCX) * scale;
-    const imgCY = outH / 2 + (ch - dh / 2 - cropCY) * scale;
+    const imgCY = outH / 2 + (ch / 2 - cropCY) * scale;
 
     const out = document.createElement("canvas");
     out.width = outW;
@@ -843,456 +716,29 @@ export default function ImageEditorCanvas({
   };
 
   // ── UI ────────────────────────────────────────────────────────
-  const tabs = [
-    { id: "rotate", label: "Rotate", icon: "↺" },
-    { id: "flip", label: "Flip", icon: "⇄" },
-    { id: "crop", label: "Crop", icon: "⊡" },
-    { id: "scale", label: "Zoom", icon: "⤢" },
-    ...(enableEnhance
-      ? [{ id: "enhance", label: "Enhance", icon: "✨" }]
-      : []),
-  ];
-  const btnBase = {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
-    padding: "10px 6px",
-    flex: 1,
-  };
-
   return (
-    <div
-      ref={containerRef}
-      data-image-editor-open="true"
-      className="rounded-none"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        width: "100%",
-        backgroundColor: "var(--background)",
-        userSelect: "none",
-        fontFamily: "'Figtree', sans-serif",
-      }}
+    <CropEditorLayout
+      workspaceRef={containerRef}
+      finalCrop={enableEnhance}
+      isDoing={isDoing}
+      isImageReady={isImageReady && isViewportReady}
+      progress={encodeProgress}
+      onCancel={onCancelClick}
+      onDone={handleDone}
     >
-      {/* Top bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "8px 12px",
-          borderBottom: "1px solid rgba(255,255,255,0.18)",
-          background: "linear-gradient(135deg,#2F80EA 0%,#236FDE 48%,#1454C5 100%)",
-          boxShadow: "0 5px 18px rgba(26,75,148,0.14)",
-          flexShrink: 0,
-        }}
-      >
-        <button
-          onClick={onCancelClick}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#fff",
-            fontSize: 15,
-            cursor: "pointer",
-            padding: "8px 12px",
-            minWidth: 44,
-            minHeight: 44,
-            touchAction: "manipulation",
-          }}
-        >
-          ✕
-        </button>
-        <div style={{ minWidth: 0, flex: 1, padding: "0 4px" }}>
-          <div style={{ color: "#fff", fontSize: 13, fontWeight: 800 }}>
-            {enableEnhance ? "Final Crop" : "Crop Photo"}
-          </div>
-          <div style={{ color: "rgba(255,255,255,0.78)", fontSize: 9, marginTop: 1 }}>
-            {enableEnhance ? "Step 3 of 3 · Adjust final cutout" : "Step 1 of 3 · Crop original photo"}
-          </div>
-        </div>
-        <button
-          type="button"
-          disabled={isDoing || !isImageReady}
-          onClick={handleDone}
-          style={{
-            position: "relative",
-            overflow: "hidden",
-            background: isDoing || !isImageReady
-              ? "rgba(255,255,255,0.16)"
-              : "#ffffff",
-            color: isDoing || !isImageReady ? "#ffffff" : "#1f63d3",
-            fontWeight: 800,
-            fontSize: 12,
-            borderRadius: 10,
-            minWidth: 104,
-            minHeight: 36,
-            border: "1px solid rgba(255,255,255,0.28)",
-            cursor: isDoing || !isImageReady ? "default" : "pointer",
-            touchAction: "manipulation",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 7,
-            padding: "0 13px",
-          }}
-        >
-          {(isDoing || !isImageReady) && (
-            <span
-              aria-hidden="true"
-              style={{
-                width: 14,
-                height: 14,
-                borderRadius: "999px",
-                border: "2px solid rgba(255,255,255,0.35)",
-                borderTopColor: "#fff",
-                animation: "crop-editor-spin .75s linear infinite",
-                flexShrink: 0,
-              }}
-            />
-          )}
-          <span style={{ letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
-            {!isImageReady
-              ? "Continue"
-              : isDoing
-                ? `Saving ${encodeProgress}%`
-                : "Done"}
-          </span>
-        </button>
-      </div>
-
-      {/* Canvas */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "100%",
-          backgroundColor: "#d1d5db",
-          backgroundImage:
-            "linear-gradient(45deg,#f3f4f6 25%,transparent 25%),linear-gradient(-45deg,#f3f4f6 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#f3f4f6 75%),linear-gradient(-45deg,transparent 75%,#f3f4f6 75%)",
-          backgroundSize: "20px 20px",
-          backgroundPosition: "0 0,0 10px,10px -10px,-10px 0px",
-          overflow: "hidden",
-          minHeight: 300,
-        }}
-      >
-        <canvas
-          ref={canvasRef}
-          style={{ touchAction: "none", display: "block", cursor: "grab" }}
-          onMouseDown={onDown}
-          onMouseMove={onMove}
-          onMouseUp={onUp}
-          onMouseLeave={onUp}
-          onTouchStart={onDown}
-          onTouchMove={onMove}
-          onTouchEnd={onUp}
-        />
-      </div>
-
-      {/* Tab controls */}
-      <div
-        style={{
-          backgroundColor: "var(--surface)",
-          borderTop: "1px solid var(--border)",
-          flexShrink: 0,
-        }}
-      >
-        {tab === "rotate" && (
-          <div
-            style={{
-              padding: "5px 8px",
-              display: "flex",
-              justifyContent: "center",
-              gap: 14,
-            }}
-          >
-            {[
-              ["↺", -90],
-              ["↻", 90],
-            ].map(([icon, deg]) => (
-              <button
-                key={deg}
-                onClick={() => setRotation((r) => r + deg)}
-                style={{
-                  padding: "4px 8px",
-                  backgroundColor: "var(--surface-secondary)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  cursor: "pointer",
-                }}
-              >
-                {icon}
-              </button>
-            ))}
-          </div>
-        )}
-        {tab === "flip" && (
-          <div
-            style={{
-              padding: "5px 8px",
-              display: "flex",
-              justifyContent: "center",
-              gap: 10,
-            }}
-          >
-            {[
-              ["⇄", flipH, () => setFlipH((v) => !v)],
-              ["⇅", flipV, () => setFlipV((v) => !v)],
-            ].map(([label, active, fn]) => (
-              <button
-                key={label}
-                onClick={fn}
-                style={{
-                  padding: "4px 8px",
-                  backgroundColor: active ? "#2F80EA" : "var(--surface-secondary)",
-                  color: active ? "#fff" : "var(--foreground)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
-        {tab === "crop" && (
-          <div
-            style={{
-              padding: "7px 8px",
-              textAlign: "center",
-              fontSize: 12,
-              color: "var(--muted-foreground)",
-            }}
-          >
-            Drag corners to resize · Drag inside to position · Crop stays inside photo
-          </div>
-        )}
-        {tab === "enhance" && enableEnhance && (
-          <div style={{ padding: "8px 14px 10px", color: "var(--foreground)" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 10,
-                marginBottom: 8,
-              }}
-            >
-              <span style={{ fontSize: 11, fontWeight: 700 }}>
-                Photo Enhance
-              </span>
-              <button
-                type="button"
-                onClick={() => setEnhance((value) => (value ? 0 : 65))}
-                style={{
-                  border: "none",
-                  borderRadius: 999,
-                  padding: "5px 10px",
-                  background: enhance ? "#2F80EA" : "var(--surface-tertiary)",
-                  color: enhance ? "#fff" : "var(--muted-foreground)",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                {enhance ? "ON" : "AUTO"}
-              </button>
-            </div>
-            <input
-              aria-label="Photo enhance"
-              type="range"
-              min={0}
-              max={100}
-              value={enhance}
-              onChange={(event) => setEnhance(Number(event.target.value))}
-              style={{ width: "100%", accentColor: "#2F80EA" }}
-            />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginTop: 7,
-                marginBottom: 3,
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-            >
-              <span>Cool</span>
-              <span>Skin Tone</span>
-              <span>Warm</span>
-            </div>
-            <input
-              aria-label="Skin tone"
-              type="range"
-              min={-50}
-              max={50}
-              value={skinTone}
-              onChange={(event) => setSkinTone(Number(event.target.value))}
-              style={{ width: "100%", accentColor: "#2F80EA" }}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Zoom slider */}
-      {tab !== "enhance" && <div
-        style={{
-          backgroundColor: "var(--surface)",
-          padding: "4px 18px 10px",
-          borderTop: "1px solid var(--border)",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            fontSize: 14,
-            fontWeight: 700,
-            color: "#2F80EA",
-            marginBottom: 4,
-          }}
-        >
-          {zoom}%
-        </div>
-        <div
-          style={{
-            position: "relative",
-            height: 34,
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              height: 18,
-              pointerEvents: "none",
-              padding: "0 2px",
-            }}
-          >
-            {Array.from({ length: 35 }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  width: 1.5,
-                  height: i % 5 === 0 ? 13 : 6,
-                  backgroundColor: i === 0 ? "#2F80EA" : "var(--border)",
-                  borderRadius: 1,
-                }}
-              />
-            ))}
-          </div>
-          <input
-            type="range"
-            min={100}
-            max={300}
-            step={1}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            style={{
-              width: "100%",
-              appearance: "none",
-              WebkitAppearance: "none",
-              background: "transparent",
-              height: 34,
-              cursor: "pointer",
-              position: "relative",
-              zIndex: 1,
-            }}
-          />
-        </div>
-        <style>{`
-          input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:5px;height:26px;background:#2F80EA;border-radius:3px;cursor:pointer;}
-          input[type=range]::-webkit-slider-runnable-track{background:transparent;height:34px;}
-          @keyframes spin{to{transform:rotate(360deg)}}
-          @keyframes crop-editor-spin{to{transform:rotate(360deg)}}
-        `}</style>
-      </div>}
-
-      {/* Tab bar */}
-      <div
-        className="rounded-none"
-        style={{
-          backgroundColor: "var(--surface)",
-          display: "flex",
-          borderTop: "1px solid var(--border)",
-          flexShrink: 0,
-        }}
-      >
-        <button
-          onClick={() => {
-            setRotation(0);
-            setFlipH(false);
-            setFlipV(false);
-            setZoom(100);
-            setEnhance(0);
-            setSkinTone(0);
-            const { w: cw, h: ch } = canvasSzRef.current;
-            cropBoxRef.current = initialCropBox(imgRef.current, cw, ch);
-            offDirtyRef.current = true;
-            scheduleDraw();
-          }}
-          style={btnBase}
-        >
-          <span style={{ fontSize: 18, color: "var(--muted-foreground)" }}>↺</span>
-          <span style={{ fontSize: 9, color: "var(--muted-foreground)" }}>Reset</span>
-        </button>
-        <button onClick={fitToCrop} style={btnBase}>
-          <span style={{ fontSize: 18, color: "var(--muted-foreground)" }}>⊞</span>
-          <span style={{ fontSize: 9, color: "var(--muted-foreground)" }}>Fit</span>
-        </button>
-        <button onClick={autoDetectFace} style={btnBase}>
-          <span style={{ fontSize: 16, color: "var(--muted-foreground)" }}>👤</span>
-          <span style={{ fontSize: 9, color: "var(--muted-foreground)" }}>Face</span>
-        </button>
-        {tabs.map(({ id, label, icon }) => {
-          const active = tab === id;
-          return (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              style={{
-                ...btnBase,
-                borderTop: active
-                  ? "2.5px solid #2F80EA"
-                  : "2.5px solid transparent",
-              }}
-            >
-              <span
-                style={{ fontSize: 18, color: active ? "#2F80EA" : "var(--muted-foreground)" }}
-              >
-                {icon}
-              </span>
-              <span
-                style={{
-                  fontSize: 9,
-                  color: active ? "#2F80EA" : "var(--muted-foreground)",
-                  fontWeight: active ? 700 : 400,
-                }}
-              >
-                {label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+      <canvas
+        ref={canvasRef}
+        aria-label="Photo crop area"
+        style={{ touchAction: "none", display: "block", cursor: "grab" }}
+        onMouseDown={onDown}
+        onMouseMove={onMove}
+        onMouseUp={onUp}
+        onMouseLeave={onUp}
+        onTouchStart={onDown}
+        onTouchMove={onMove}
+        onTouchEnd={onUp}
+        onTouchCancel={onUp}
+      />
+    </CropEditorLayout>
   );
 }

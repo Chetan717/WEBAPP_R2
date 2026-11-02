@@ -21,20 +21,4 @@ test('Navratri Special bypasses form like Good Morning, without changing form fl
   assert.match(editor, /"Navratri_Special"/);
 });
 
-for (const file of [
-  'src/pages/Form/ImageEditorCanvas.jsx',
-  'src/pages/mainform/components/ImageEditorCanvas.jsx',
-]) {
-  test(`${file}: thin line only, with safe mobile gutters and invisible resize hits`, () => {
-    const source = read(file);
-    assert.match(source, /Math\.min\(width - 48,/);
-    assert.match(source, /HANDLE_HIT = 36/);
-    assert.match(source, /ctx\.lineWidth = 1;\s*ctx\.strokeRect\(fx, fy, fw, fh\)/);
-    assert.doesNotMatch(source, /HANDLE_VIS/);
-    assert.doesNotMatch(source, /ctx\.fillRect\(\s*cx -/);
-    assert.doesNotMatch(source, /bracketThickness|Corner L-brackets|Corner lines/);
-    assert.match(source, /ctx\.strokeStyle = "rgba\(255,255,255,0\.70\)"/);
-    assert.match(source, /margin = 0\.92/);
-    assert.match(source, /touchAction: "none"/);
-  });
-}
+// Crop geometry, visible handles and quality are covered by cropEditorGeometry.test.mjs.
