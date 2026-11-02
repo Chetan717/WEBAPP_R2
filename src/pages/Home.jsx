@@ -59,7 +59,7 @@ import { HOME_CATEGORY_ITEMS, isEverydayCategory } from "./Homepage/Component/ho
 
 const HOME_TORAN_ENABLED = import.meta.env.VITE_HOME_TORAN_ENABLED !== "false";
 const HOME_TORAN_URL =
-  "https://cdn.mlmposter.com/companies/plans/1793629630460_aamrb1.webp";
+  "https://cdn.mlmposter.com/companies/plans/1793628826483_opkwzn.webp";
 
 const PULL_REFRESH_TRIGGER = 64;
 const PULL_REFRESH_MAX = 96;
