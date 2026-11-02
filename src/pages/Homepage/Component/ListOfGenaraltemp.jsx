@@ -644,6 +644,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
 
   const renderGroupTemplates = (group, displayName) => {
     const isCapping = group?.type === "Capping";
+    const isTrending = group?.type === "Today_Trending";
     const items = isCapping
       ? (group.templates || []).slice(0, 1)
       : group.templates || [];
@@ -652,9 +653,13 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
 
     return (
       <div className="-mx-1.5 overflow-x-auto scroll-smooth snap-x snap-mandatory px-1.5 pb-2 hide-scrollbar scroll-gpu md:-mx-3 md:px-3">
-        <div className={fillRow
-          ? `grid w-full min-w-0 gap-3 ${isWideCard ? "grid-cols-1" : "grid-cols-2"}`
-          : "flex w-max min-w-full gap-3 pr-1.5"}>
+        <div
+          className={
+            fillRow
+              ? `grid w-full min-w-0 gap-3 ${isWideCard ? "grid-cols-1" : "grid-cols-2"}`
+              : "flex w-max min-w-full gap-3 pr-1.5"
+          }
+        >
           {items.map((item) => {
             const cardLabel = item?.Subtype || displayName;
             return (
@@ -662,11 +667,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                 key={item.id}
                 type="button"
                 onClick={() => handleImagePress(item)}
-                className={`${
-                  fillRow
-                    ? "w-full min-w-0"
-                    : "w-[118px]"
-                } 
+                className={`${fillRow ? "w-full min-w-0" : "w-[118px]"} 
                   shrink-0 snap-start overflow-hidden rounded-[15px] border bg-white text-center shadow-[0_4px_14px_rgba(28,54,92,0.08)] transition-transform duration-150 active:scale-[0.985] dark:bg-[#111827] ${
                     selectedTemp?.id === item?.id
                       ? "border-[#2F80EA] ring-2 ring-[#2F80EA]/20"
@@ -680,7 +681,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                 >
                   {item?.image ? (
                     <ImageWithSkeleton
-                      src={item.image}
+                      src={isTrending ? item?.ShowCaseForm?.image : item.image}
                       className={`${
                         isWideCard
                           ? "h-full w-full object-cover"
@@ -771,7 +772,11 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                   <TemplateSectionHeading
                     type={group.type}
                     label={
-                      displayName === "Training" ? "Seat Booking" : displayName
+                      displayName === "Today Trending"
+                        ? "Company Trending"
+                        : displayName === "Training"
+                          ? "Seat Booking"
+                          : displayName
                     }
                   />
                   {renderViewAllButton(group)}
