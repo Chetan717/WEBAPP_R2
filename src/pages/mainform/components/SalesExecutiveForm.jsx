@@ -869,7 +869,16 @@ export default function SalesExecutiveForm() {
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden bg-background">
       {/* Fixed 30% preview. Canvas stays square and never resizes while scrolling. */}
-      <div className="absolute inset-x-0 top-0 z-0 flex h-[30%] items-center justify-center overflow-hidden px-3 py-2">
+      <div
+        className="absolute inset-x-0 top-0 z-0 flex h-[30%] items-center justify-center overflow-hidden px-3 py-2"
+        style={{
+          backgroundImage:
+            'url("https://cdn.mlmposter.com/companies/plans/1793626765712_2qqts2.webp")',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         <div className="flex w-full max-w-[340px] items-center justify-center gap-2">
           <div
             className="pointer-events-none relative flex aspect-square shrink-0 items-center justify-center"
@@ -898,13 +907,14 @@ export default function SalesExecutiveForm() {
                 previewAchievementForm={
                   isAchievment ? liveAchievementForm : undefined
                 }
-                previewIncomeFormData={isIncome ? liveIncomeFormData : undefined}
+                previewIncomeFormData={
+                  isIncome ? liveIncomeFormData : undefined
+                }
                 middaleImage={previewMiddleImage}
                 setmiddaleImage={setPreviewMiddleImage}
               />
             )}
           </div>
-
         </div>
       </div>
 
@@ -922,7 +932,10 @@ export default function SalesExecutiveForm() {
       >
         {/* ── Tabs ── */}
         {isMeeting ? null : (
-          <div className="flex gap-1.5 p-1 bg-muted/30 rounded-2xl border border-border/50" data-guide="design-audience">
+          <div
+            className="flex gap-1.5 p-1 bg-muted/30 rounded-2xl border border-border/50"
+            data-guide="design-audience"
+          >
             {[
               {
                 key: "team",
@@ -957,10 +970,15 @@ export default function SalesExecutiveForm() {
 
         {/* Top upline selection is intentionally hidden here; saved profile uplines are used automatically by the design. */}
 
-        {isMeeting ? <MeetingForm onPreviewChange={setLiveMeetingData} /> : null}
+        {isMeeting ? (
+          <MeetingForm onPreviewChange={setLiveMeetingData} />
+        ) : null}
 
         {isMeeting ? null : (
-          <div className="rounded-2xl border border-border bg-background p-4 space-y-4" data-guide="design-details">
+          <div
+            className="rounded-2xl border border-border bg-background p-4 space-y-4"
+            data-guide="design-details"
+          >
             <div className="flex items-center gap-2">
               <div className="w-1 h-4 rounded-full bg-accent flex-shrink-0" />
               <p className="text-[13px] font-bold text-foreground">
@@ -985,8 +1003,7 @@ export default function SalesExecutiveForm() {
                         setAchiever((p) => ({
                           ...p,
                           title: key,
-                          achieverName:
-                            `${key} ${p.name || ""}`.trim(),
+                          achieverName: `${key} ${p.name || ""}`.trim(),
                         }));
                       }}
                       className="border border-border bg-[var(--field-background)] text-foreground"
@@ -1090,7 +1107,9 @@ export default function SalesExecutiveForm() {
                           <input
                             type="date"
                             value={trainingDateInput}
-                            onChange={(e) => setTrainingDateInput(e.target.value)}
+                            onChange={(e) =>
+                              setTrainingDateInput(e.target.value)
+                            }
                             className="w-full rounded-xl border border-border bg-background px-3 py-2 pr-10 text-[12px] text-foreground"
                           />
                           <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1098,7 +1117,9 @@ export default function SalesExecutiveForm() {
                         <button
                           type="button"
                           onClick={addTrainingDate}
-                          disabled={!trainingDateInput || trainingDates.length >= 4}
+                          disabled={
+                            !trainingDateInput || trainingDates.length >= 4
+                          }
                           className="w-full inline-flex justify-center items-center gap-2 rounded-xl bg-accent px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-accent-dark disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <span className="text-xs">+</span>
@@ -1113,9 +1134,12 @@ export default function SalesExecutiveForm() {
                               className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/20 px-3 py-1 text-[11px] text-foreground"
                             >
                               {new Date(`${dateValue}T00:00:00`).getDate()},
-                              {new Date(`${dateValue}T00:00:00`).toLocaleString("en-US", {
-                                month: "short",
-                              }).toUpperCase()} {new Date(`${dateValue}T00:00:00`).getFullYear()}
+                              {new Date(`${dateValue}T00:00:00`)
+                                .toLocaleString("en-US", {
+                                  month: "short",
+                                })
+                                .toUpperCase()}{" "}
+                              {new Date(`${dateValue}T00:00:00`).getFullYear()}
                               <button
                                 type="button"
                                 onClick={() => removeTrainingDate(dateValue)}
@@ -1245,7 +1269,9 @@ export default function SalesExecutiveForm() {
             <div className="flex items-center gap-2">
               <div className="w-1 h-4 rounded-full bg-accent flex-shrink-0" />
               <p className="text-[13px] font-bold text-foreground">
-                {selll?.type === "Domestic_Trip" ? "Domestic Trip Details" : "Bonanza Details"}
+                {selll?.type === "Domestic_Trip"
+                  ? "Domestic Trip Details"
+                  : "Bonanza Details"}
               </p>
             </div>
 
@@ -1425,6 +1451,11 @@ export default function SalesExecutiveForm() {
             </div>
           </div>
         ) : null}
+        <div
+          className="  flex h-[30%] items-center justify-center overflow-hidden px-3 py-2"
+         
+          
+        ></div>
       </div>
 
       {isMeeting ? null : (

@@ -30,18 +30,18 @@ export function getBottomFeatheredProfilePhoto(
     // source-atop keeps the surrounding transparent area transparent.
     const mist = context.createLinearGradient(0, 0, 0, height);
     mist.addColorStop(0, "rgba(255,255,255,0)");
-    mist.addColorStop(0.8, "rgba(255,255,255,0)");
-    mist.addColorStop(0.92, "rgba(255,255,255,0.12)");
-    mist.addColorStop(1, "rgba(255,255,255,0.42)");
+    mist.addColorStop(0.98, "rgba(255,255,255,0)");
+    mist.addColorStop(0.99, "rgba(255,255,255,0.015)");
+    mist.addColorStop(1, "rgba(255,255,255,0.05)");
     context.globalCompositeOperation = "source-atop";
     context.fillStyle = mist;
     context.fillRect(0, 0, width, height);
 
     const fade = context.createLinearGradient(0, 0, 0, height);
     fade.addColorStop(0, "rgba(0,0,0,1)");
-    fade.addColorStop(0.82, "rgba(0,0,0,1)");
-    fade.addColorStop(0.9, "rgba(0,0,0,0.9)");
-    fade.addColorStop(0.96, "rgba(0,0,0,0.38)");
+    fade.addColorStop(0.98, "rgba(0,0,0,1)");
+    fade.addColorStop(0.99, "rgba(0,0,0,0.9)");
+    fade.addColorStop(0.995, "rgba(0,0,0,0.6)");
     fade.addColorStop(1, "rgba(0,0,0,0)");
     context.globalCompositeOperation = "destination-in";
     context.fillStyle = fade;
