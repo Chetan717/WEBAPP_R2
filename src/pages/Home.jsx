@@ -57,6 +57,10 @@ import { RANK_PROMOTION_TYPES } from "../utils/templateTypeConfig";
 import { EVERYDAY_MOMENTS_GROUP_KEY } from "../utils/everydayMoments";
 import { HOME_CATEGORY_ITEMS, isEverydayCategory } from "./Homepage/Component/homeCategoryConfig";
 
+const HOME_TORAN_ENABLED = import.meta.env.VITE_HOME_TORAN_ENABLED !== "false";
+const HOME_TORAN_URL =
+  "https://cdn.mlmposter.com/companies/plans/1793629630460_aamrb1.webp";
+
 const PULL_REFRESH_TRIGGER = 64;
 const PULL_REFRESH_MAX = 96;
 const PULL_REFRESH_ACTIVE_HEIGHT = 48;
@@ -280,43 +284,61 @@ function HomeHero({ onSearchClick, compact }) {
 
   return (
     <header
-      className={`sticky  top-0 z-40 overflow-hidden bg-[#2F80EA] text-white  transition-all duration-200 ${
-        compact ? "px-2 pb-3 pt-3" : "px-2 pb-4 pt-4"
-      } md:px-4`}
+      className="sticky top-0 z-40 overflow-hidden bg-[#F5F7FC] text-white dark:bg-[#0B0F19]"
     >
-      <div className="pointer-events-none absolute -left-16 top-10 h-44 w-44 rounded-full" />
-      <div className="pointer-events-none absolute -right-14 -top-20 h-48 w-48 rounded-full" />
+      <div
+        className={`relative overflow-hidden bg-[#2F80EA] transition-all duration-200 ${
+          compact ? "px-2 pb-3 pt-3" : "px-2 pb-4 pt-4"
+        } md:px-4`}
+      >
+        <div className="pointer-events-none absolute -left-16 top-10 h-44 w-44 rounded-full" />
+        <div className="pointer-events-none absolute -right-14 -top-20 h-48 w-48 rounded-full" />
 
-      <div className="relative mx-auto w-full max-w-7xl">
-        <div className={`flex items-center ${compact ? "gap-2" : "gap-2.5"}`}>
-          <button
-            type="button"
-            onClick={() => navigate("/profile")}
-            aria-label="Open profile"
-            className={`shrink-0 ml-1 overflow-hidden rounded-[15px] border-2 border-white/90 bg-white shadow-[0_5px_16px_rgba(7,53,131,0.18)] transition-all duration-200 ${
-              compact ? "h-[42px] w-[42px]" : "h-[42px] w-[42px]"
-            }`}
-          >
-            {profilePhoto ? (
-              <img
-                src={profilePhoto}
-                alt={userName || "Profile"}
-                className="h-full w-full object-contain"
-              />
-            ) : (
-              <span
-                className={`flex h-full w-full items-center justify-center font-bold text-[#F4B942] ${compact ? "text-[15px]" : "text-[18px]"}`}
-              >
-                {initial}
-              </span>
-            )}
-          </button>
+        <div className="relative mx-auto w-full max-w-7xl">
+          <div className={`flex items-center ${compact ? "gap-2" : "gap-2.5"}`}>
+            <button
+              type="button"
+              onClick={() => navigate("/profile")}
+              aria-label="Open profile"
+              className={`shrink-0 ml-1 overflow-hidden rounded-[15px] border-2 border-white/90 bg-white shadow-[0_5px_16px_rgba(7,53,131,0.18)] transition-all duration-200 ${
+                compact ? "h-[42px] w-[42px]" : "h-[42px] w-[42px]"
+              }`}
+            >
+              {profilePhoto ? (
+                <img
+                  src={profilePhoto}
+                  alt={userName || "Profile"}
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <span
+                  className={`flex h-full w-full items-center justify-center font-bold text-[#F4B942] ${compact ? "text-[15px]" : "text-[18px]"}`}
+                >
+                  {initial}
+                </span>
+              )}
+            </button>
 
-          <div className="w-full  flex-1">
-            <SearchBar onClick={onSearchClick} compact={compact} />
+            <div className="w-full  flex-1">
+              <SearchBar onClick={onSearchClick} compact={compact} />
+            </div>
           </div>
         </div>
       </div>
+
+      {HOME_TORAN_ENABLED && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none relative -mt-[7px] h-[36px] w-full select-none"
+          style={{
+            backgroundImage: `url("${HOME_TORAN_URL}")`,
+            // Crop the CDN image's transparent padding inside the 36px strip.
+            backgroundSize: "auto 99px",
+            backgroundPosition: "center -25px",
+            backgroundRepeat: "repeat-x",
+          }}
+        />
+      )}
     </header>
   );
 }
