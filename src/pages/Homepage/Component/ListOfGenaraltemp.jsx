@@ -680,7 +680,7 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                       src={istodaytrending ? item?.ShowCaseForm : item.image}
                       className={`${
                         isWideCard
-                          ? "h-full w-full object-contain"
+                          ? "h-full w-full object-cover"
                           : "h-full w-full object-cover"
                       }`}
                       alt={cardLabel}

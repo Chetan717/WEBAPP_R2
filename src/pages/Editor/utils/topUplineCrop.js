@@ -7,6 +7,6 @@ export function getTopUplineHeadCrop(image) {
     return undefined;
   }
 
-  const size = Math.min(width, height / 2);
+  const size = Math.min(width, height / 1.5);
   return { x: (width - size) / 2, y: 0, width: size, height: size };
 }
