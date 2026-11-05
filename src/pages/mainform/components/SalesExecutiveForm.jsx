@@ -919,10 +919,12 @@ export default function SalesExecutiveForm() {
       </div>
 
       {/* Fixed 70% form area. Only this area scrolls; preview remains unchanged. */}
+      {/* Wait for child onChange handlers to save their values before starting
+          the preview. A state update during input capture can restore the old
+          controlled value before the first character reaches those handlers. */}
       <div
         ref={formScrollRef}
-        onInputCapture={markEditingStarted}
-        onChangeCapture={markEditingStarted}
+        onChange={markEditingStarted}
         className={`absolute inset-x-0 top-[30%] z-10 space-y-5 overflow-y-auto rounded-t-[16px] border-t border-white/70 bg-background/95 px-4 pt-4 shadow-[0_-10px_24px_rgba(15,23,42,0.10)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0f1726]/95 ${isMeeting ? "bottom-0 pb-8" : "bottom-[84px] pb-6"}`}
         style={{
           WebkitOverflowScrolling: "touch",
