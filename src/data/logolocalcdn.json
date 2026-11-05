@@ -782,5 +782,19 @@
           "size": "rectangle"
         }
       ]
+    },
+    {
+      "ID": "SlP8Hq17WccNpLiT1i6R",
+      "name": "McZEN ACADEMY",
+      "logos": [
+        {
+          "link": "https://cdn.mlmposter.com/companies/logos/1793877513934_af9i29.webp",
+          "size": "square"
+        },
+        {
+          "link": "https://cdn.mlmposter.com/companies/logos/1793877530638_sfakxy.webp",
+          "size": "square"
+        }
+      ]
     }
 ]
