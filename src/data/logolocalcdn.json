@@ -768,5 +768,19 @@
           "size": "square"
         }
       ]
+    },
+    {
+      "ID": "m0jl9gfbRcZWvfnIxChg",
+      "name": "DREAM LIFE",
+      "logos": [
+        {
+          "link": "https://cdn.mlmposter.com/companies/logos/1790664760286_2rpmsu.webp",
+          "size": "rectangle"
+        },
+        {
+          "link": "https://cdn.mlmposter.com/companies/logos/1790664760286_2rpmsu.webp",
+          "size": "rectangle"
+        }
+      ]
     }
 ]
