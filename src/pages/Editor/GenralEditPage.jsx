@@ -3683,8 +3683,8 @@ function GeneralEditPage({
                 {isIncome ? (
                   <Text
                     fontFamily="Montserrat"
-                    x={isRight ? 60 : 165}
-                    y={isRight ? 195 : 197}
+                    x={isRight ? 60 : 135}
+                    y={isRight ? 215 : 225}
                     width={130}
                     height={30}
                     text={`${incomeDay} ${incomeType.toUpperCase()}`}
