@@ -3815,7 +3815,7 @@ function GeneralEditPage({
                   />
                 )}
 
-                {isIncome ? (
+                {/* {isIncome ? (
                   <Group x={isRight ? 100 : 170} y={107}>
                     <Image
                       x={10}
@@ -3832,7 +3832,7 @@ function GeneralEditPage({
                       image={AchiveFrame}
                     />
                   </Group>
-                ) : null}
+                ) : null} */}
 
                 {isAchievement ? (
                   <Image

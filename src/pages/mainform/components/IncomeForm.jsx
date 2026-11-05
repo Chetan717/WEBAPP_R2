@@ -77,7 +77,7 @@ const IncomeForm = ({ onSaved, onPreviewChange }) => {
       e.amount = "Amount is required";
     if (!formData.noOfDay || String(formData.noOfDay).trim() === "")
       e.noOfDay = "No. of days is required";
-    if (!formData.proofImage) e.proofImage = "Proof image is required";
+    // if (!formData.proofImage) e.proofImage = "Proof image is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -118,9 +118,9 @@ const IncomeForm = ({ onSaved, onPreviewChange }) => {
       </div>
 
       <div className="flex flex-row gap-1 w-full justify-center items-center">
-        <div className="flex flex-col gap-3 w-[60%] ">
+        <div className="flex flex-col justify-center w-full items-start gap-3  ">
           {/* Amount */}
-          <div>
+          <div className="w-full">
             <label className="text-[11px] font-semibold text-foreground/60 block mb-1.5">
               Amount <span className="text-danger">*</span>
             </label>
@@ -143,7 +143,7 @@ const IncomeForm = ({ onSaved, onPreviewChange }) => {
               <p className="text-[11px] text-danger mt-1">{errors.amount}</p>
             )}
           </div>
-          <div>
+          <div className="w-full">
             <label className="text-[11px] font-semibold text-foreground/60 block mb-1.5">
               No of Days <span className="text-danger">*</span>
             </label>
@@ -161,7 +161,7 @@ const IncomeForm = ({ onSaved, onPreviewChange }) => {
             )}
           </div>
         </div>
-        <div className="flex flex-col  w-[40%] h-full  ">
+        {/* <div className="flex flex-col  w-[40%] h-full  ">
       
           <div
             className={
@@ -177,7 +177,7 @@ const IncomeForm = ({ onSaved, onPreviewChange }) => {
           {errors.proofImage && (
             <p className="text-[11px] text-danger mt-1">{errors.proofImage}</p>
           )}
-        </div>
+        </div> */}
       </div>
 
       <div>
