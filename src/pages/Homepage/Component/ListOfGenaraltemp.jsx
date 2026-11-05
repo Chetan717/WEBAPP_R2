@@ -681,8 +681,8 @@ function ListOfGenaraltemp({ templates, loading, searchQuery, companyName }) {
                 >
                   {item?.image ? (
                     <ImageWithSkeleton
-                      // src={isTrending ? item?.ShowCaseForm?.image : item.image}
-                      src={item.image}
+                      src={isTrending ? item?.ShowCaseForm?.image : item.image}
+                      // src={item.image}
                       className={`${
                         isWideCard
                           ? "h-full w-full object-cover"
