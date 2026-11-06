@@ -8,7 +8,7 @@ import { COLLECTIONS } from "../collections";
 
 // Product requirement: a signed-in user can trigger at most 10 successful
 // image/video downloads per local calendar day from the editor.
-export const DAILY_DOWNLOAD_LIMIT = 30;
+export const DAILY_DOWNLOAD_LIMIT = 300;
 export const DAILY_DOWNLOAD_DATE_FIELD = "dailyDownloadDate";
 export const DAILY_DOWNLOAD_COUNT_FIELD = "dailyDownloadCount";
 

@@ -2044,14 +2044,14 @@ function GeneralEditPage({
         "current-user",
     });
 
-    if (!reservation.allowed) {
-      showToast(
-        `Daily download limit reached. You can download up to ${DAILY_DOWNLOAD_LIMIT} images or videos per day. Please try again tomorrow.`,
-        "error",
-        5000,
-      );
-      return null;
-    }
+    // if (!reservation.allowed) {
+    //   showToast(
+    //     `Daily download limit reached. You can download up to ${DAILY_DOWNLOAD_LIMIT} images or videos per day. Please try again tomorrow.`,
+    //     "error",
+    //     5000,
+    //   );
+    //   return null;
+    // }
 
     return reservation;
   };
