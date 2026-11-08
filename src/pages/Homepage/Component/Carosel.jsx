@@ -8,7 +8,7 @@ import { useSelectedCompany } from "../../../Context/SelectedCompanyContext";
 import { rememberEditorBackTarget } from "../../../utils/editorNavigation";
 
 const PERMANENT_TRENDING_GIF =
-  "https://cdn.mlmposter.com/video/Gold%20Traditional%20Happy%20Diwali%20Video_20261102_161517_0000.gif";
+  "https://cdn.mlmposter.com/video/Happy_Diwali_MLMLIVE_Hero%20(1).gif";
 
 const PERMANENT_TRENDING_SLIDE = {
   id: "permanent-today-trending-gif",
