@@ -9,19 +9,7 @@ const carousel = readFileSync(
   "utf8",
 );
 
-test("Today Trending carousel keeps the requested GIF permanently in first position", () => {
-  assert.match(
-    carousel,
-    /1ZKuNSZ3f82Xpn9bLCP4aXzDFwEXSKgr-/,
-  );
-  assert.match(
-    carousel,
-    /const renderSlides = \[PERMANENT_TRENDING_SLIDE, \.\.\.dynamicSlides\]/,
-  );
-  assert.match(carousel, /permanentPromo: true/);
-});
-
-test("dynamic company/general trending slides remain appended after the permanent GIF", () => {
+test("dynamic company/general trending slides remain available", () => {
   assert.match(carousel, /TTrend_templateService\(selectedCompany\?\.id \|\| ""\)/);
   assert.match(carousel, /const dynamicSlides = slides\.length/);
 });

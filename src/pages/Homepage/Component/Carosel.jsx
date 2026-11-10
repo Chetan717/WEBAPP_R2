@@ -7,17 +7,6 @@ import { hasMlmProfileInStorage } from "../../../utils/companyStorage";
 import { useSelectedCompany } from "../../../Context/SelectedCompanyContext";
 import { rememberEditorBackTarget } from "../../../utils/editorNavigation";
 
-const PERMANENT_TRENDING_GIF =
-  "https://cdn.mlmposter.com/video/Happy_Diwali_MLMLIVE_Hero%20(1).gif";
-
-const PERMANENT_TRENDING_SLIDE = {
-  id: "permanent-today-trending-gif",
-  type: "Today_Trending",
-  Subtype: "Today Trending",
-  image: PERMANENT_TRENDING_GIF,
-  permanentPromo: true,
-};
-
 function displayTitle(item, index) {
   const subtype = String(item?.Subtype || "").trim();
   if (subtype) return subtype;
@@ -124,9 +113,7 @@ export default function Carosel() {
           },
         ];
 
-  // Keep the requested GIF permanently at position 1 while Firestore/company
-  // trending slides continue to refresh normally after it.
-  const renderSlides = [PERMANENT_TRENDING_SLIDE, ...dynamicSlides];
+  const renderSlides = dynamicSlides;
 
   useEffect(() => {
     activeIndexRef.current = activeIndex;
@@ -203,18 +190,6 @@ export default function Carosel() {
                 }}
               />
             );
-
-            if (item.permanentPromo) {
-              return (
-                <div
-                  key={item.id}
-                  className={slideClassName}
-                  aria-label="Today Trending"
-                >
-                  {image}
-                </div>
-              );
-            }
 
             return (
               <button

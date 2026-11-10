@@ -20,7 +20,6 @@ export default function SplashScreen({ onDone }) {
         background:
           "linear-gradient(150deg, var(--app-blue-start) 0%, #2778e8 45%, var(--app-blue-end) 100%)",
         transition: "opacity 0.4s ease",
-        // backgroundImage: `https://cdn.mlmposter.com/video/MLMLIVE_Diwali_Splash_Premium_Animated.gif`,
         // opacity: visible ? 1 : 0,
         // pointerEvents: visible ? "all" : "none",
       }}

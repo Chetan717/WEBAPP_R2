@@ -10,7 +10,7 @@ import { AppLanguageProvider } from "./i18n/AppLanguageContext.jsx";
 import { ErrorBoundary, OnlineProvider } from "./components/ErrorBoundary.jsx";
 import { AuthProvider } from "./Auth/AuthContext.jsx";
 import { SelectedCompanyProvider } from "./Context/SelectedCompanyContext.jsx";
-import CelebrationEffects from "./components/celebration/CelebrationEffects.jsx";
+import DownloadConfetti from "./components/DownloadConfetti.jsx";
 import { installModalKeyboardGuard } from "./utils/modalKeyboard.js";
 import { installGlobalReferralCapture } from "./utils/referralCode.js";
 // import ScrollToTop from "./Pages/ScrollToTop.js";
@@ -118,7 +118,7 @@ createRoot(document.getElementById("root")!).render(
           <GlobalToastController />
           <GlobalKeyboardController />
           <ModalKeyboardController />
-          <CelebrationEffects />
+          <DownloadConfetti />
 
           <Toast.Provider
             placement="top"

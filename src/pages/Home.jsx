@@ -1,9 +1,6 @@
 import Carosel from "./Homepage/Component/Carosel";
 import Festival from "./Homepage/Component/Festival";
 import VoiceSearchButton from "../components/VoiceSearchButton";
-import DiwaliGreeting, { DiwaliLights } from "../components/celebration/DiwaliGreeting";
-import useDiwaliSeason from "../components/celebration/useDiwaliSeason";
-import { celebrateDiwaliWelcome, endDiwaliWelcome } from "../utils/downloadCelebration";
 import ListOfGenaraltemp from "./Homepage/Component/ListOfGenaraltemp";
 import React, {
   useEffect,
@@ -34,7 +31,7 @@ import {
 } from "./Homepage/Component/homeTemplatePresentation";
 import { auth } from "../Firebase";
 import { toast } from "@heroui/react";
-import { useLocation, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import {
   Banknote,
   Bell,
@@ -59,10 +56,6 @@ import { MLM_PROFILE_CHANGED_EVENT } from "../utils/companyStorage";
 import { RANK_PROMOTION_TYPES } from "../utils/templateTypeConfig";
 import { EVERYDAY_MOMENTS_GROUP_KEY } from "../utils/everydayMoments";
 import { HOME_CATEGORY_ITEMS, isEverydayCategory } from "./Homepage/Component/homeCategoryConfig";
-
-const HOME_TORAN_ENABLED = import.meta.env.VITE_HOME_TORAN_ENABLED !== "false";
-const HOME_TORAN_URL =
-  "https://cdn.mlmposter.com/companies/plans/1793629954746_8177f7.webp";
 
 const PULL_REFRESH_TRIGGER = 64;
 const PULL_REFRESH_MAX = 96;
@@ -263,7 +256,7 @@ function HomeCategoryRail({ items, onOpen, compact = false }) {
   );
 }
 
-function HomeHero({ onSearchClick, compact, diwaliEnabled }) {
+function HomeHero({ onSearchClick, compact }) {
   const navigate = useNavigate();
   const [userName, setUserName] = useState(() => getStoredUserName());
   const [profilePhoto, setProfilePhoto] = useState(() =>
@@ -290,11 +283,10 @@ function HomeHero({ onSearchClick, compact, diwaliEnabled }) {
       className="sticky top-0 z-40 overflow-hidden bg-[#F5F7FC] text-white dark:bg-[#0B0F19]"
     >
       <div
-        className={`home-hero-surface relative overflow-hidden bg-[#2F80EA] transition-all duration-200 ${
+        className={`relative overflow-hidden bg-[#2F80EA] transition-all duration-200 ${
           compact ? "px-2 pb-3 pt-3" : "px-2 pb-4 pt-4"
         } md:px-4`}
       >
-        {diwaliEnabled && <DiwaliLights />}
         <div className="pointer-events-none absolute -left-16 top-10 h-44 w-44 rounded-full" />
         <div className="pointer-events-none absolute -right-14 -top-20 h-48 w-48 rounded-full" />
 
@@ -330,19 +322,6 @@ function HomeHero({ onSearchClick, compact, diwaliEnabled }) {
         </div>
       </div>
 
-      {HOME_TORAN_ENABLED && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none relative -mt-[7px] h-[36px] w-full select-none"
-          style={{
-            backgroundImage: `url("${HOME_TORAN_URL}")`,
-            // Crop the CDN image's transparent padding inside the 36px strip.
-            backgroundSize: "auto 99px",
-            backgroundPosition: "center -25px",
-            backgroundRepeat: "repeat-x",
-          }}
-        />
-      )}
     </header>
   );
 }
@@ -471,28 +450,6 @@ function Home() {
   } = useGeneralData();
   const companyId = selectedCompany?.id || "";
   const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const diwaliEnabled = useDiwaliSeason();
-  const festivalSectionRef = useRef(null);
-
-  useEffect(() => {
-    if (!diwaliEnabled || pathname !== "/") return undefined;
-    // Let Home paint before launching the welcome. The global controller
-    // deduplicates StrictMode, company changes and subsequent Home visits.
-    const timer = window.setTimeout(celebrateDiwaliWelcome, 650);
-    return () => {
-      window.clearTimeout(timer);
-      endDiwaliWelcome();
-    };
-  }, [diwaliEnabled, pathname]);
-
-  const openFestivalBanners = useCallback(() => {
-    festivalSectionRef.current?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      block: "start",
-    });
-  }, []);
-
   const [loading, setLoading] = useState(false);
   const [homeDataVersion, setHomeDataVersion] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -856,12 +813,11 @@ function Home() {
   return (
     <div
       ref={homeRootRef}
-      className={`flex min-h-full w-full flex-col bg-[#F5F7FC] dark:bg-[#0B0F19]${diwaliEnabled ? " home-diwali" : ""}`}
+      className="flex min-h-full w-full flex-col bg-[#F5F7FC] dark:bg-[#0B0F19]"
     >
       <HomeHero
         onSearchClick={() => navigate("/search")}
         compact={homeHeaderCompact}
-        diwaliEnabled={diwaliEnabled}
       />
 
       <a
@@ -917,8 +873,6 @@ function Home() {
         </div>
       </div>
 
-      {diwaliEnabled && <DiwaliGreeting onExplore={openFestivalBanners} />}
-
       <HomeCategoriesSection
         items={HOME_CATEGORY_ITEMS}
         onOpen={openCategoryItem}
@@ -936,7 +890,7 @@ function Home() {
           />
         </section>
 
-        <section ref={festivalSectionRef} className="mb-[17px] scroll-mt-[140px]" data-guide="home-templates">
+        <section className="mb-[17px]" data-guide="home-templates">
           <Festival
             key={`festival-${companyId}-${templateDataVersion}-${homeDataVersion}`}
           />
