@@ -43,8 +43,8 @@ async function tryWorkerEncoding(canvas, type, quality) {
   ) {
     throw new Error("Crop worker not supported");
   }
-  const bitmap = await createImageBitmap(canvas);
   const target = getWorker();
+  const bitmap = await createImageBitmap(canvas);
   return new Promise((resolve, reject) => {
     const id = ++nextId;
     const timer = setTimeout(() => {
@@ -67,7 +67,14 @@ async function tryWorkerEncoding(canvas, type, quality) {
 
 function originalCanvasEncoding(canvas, type, quality) {
   return new Promise((resolve) => {
-    canvas.toBlob(resolve, type, quality);
+    // Some embedded browsers expose toBlob but never invoke its callback.
+    const timer = setTimeout(() => resolve(null), 8000);
+    try {
+      canvas.toBlob((blob) => { clearTimeout(timer); resolve(blob); }, type, quality);
+    } catch {
+      clearTimeout(timer);
+      resolve(null);
+    }
   });
 }
 

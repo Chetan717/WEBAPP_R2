@@ -1,0 +1,16 @@
+MLMLIVE PHOTO PREVIEW - UPDATE PATCH ONLY
+
+Base project: MLMLIVE_WEBAPP_R2_SCALABLE_PREVIEW(6).zip
+
+Apply:
+1. Is ZIP ko extract karein.
+2. src, scripts aur tests folders ko apne existing project root mein merge karein.
+3. Same path ki existing files replace karein; naye helper/test files add karein.
+4. Project root mein npm run build chalayein, phir updated build deploy karein.
+
+Is patch mein 8 runtime source files, 1 CDN checker aur 1 regression test file hai.
+Ready-made dist include nahi hai; build upar wale command se regenerate hoga.
+
+Validation: Previous complete update ka production build aur 47 targeted tests pass the.
+Patch ke har code file ka content usi validated update se byte-for-byte match hai.
+Physical affected-device testing abhi pending hai.

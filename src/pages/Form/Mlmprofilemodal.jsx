@@ -931,7 +931,7 @@ export default function MLMProfilePage() {
     void preloadBgModel().catch(() => {
       // The processing step will retry or use the bundled fallback.
     });
-    setEditorSrc(URL.createObjectURL(files[0]));
+    setEditorSrc(files[0]);
     setEditorContext("topup");
     setEditorStage("initial");
     setStep("editor");
@@ -982,7 +982,7 @@ export default function MLMProfilePage() {
       );
       if (controller.signal.aborted) return;
       toast.success("Background removed successfully! ✨");
-      setEditorSrc(URL.createObjectURL(blob));
+      setEditorSrc(blob);
       setEditorContext("topup");
       setEditorStage("final");
       setStep("editor");
@@ -1050,7 +1050,7 @@ export default function MLMProfilePage() {
       // The processing step will retry or use the bundled fallback.
     });
 
-    setEditorSrc(URL.createObjectURL(file));
+    setEditorSrc(file);
     setEditingProfileIndex("new");
     setEditorContext("profile");
     setEditorStage("initial");
@@ -1092,7 +1092,7 @@ export default function MLMProfilePage() {
       );
       if (controller.signal.aborted) return;
       toast.success("Background removed successfully! ✨");
-      setEditorSrc(URL.createObjectURL(blob));
+      setEditorSrc(blob);
       setEditingProfileIndex("new");
       setForm((f) => ({ ...f, _pendingProfileBlobs: [] }));
       setEditorContext("profile");
@@ -1523,7 +1523,7 @@ export default function MLMProfilePage() {
           <div className="w-full h-full bg-background rounded-2xl border border-border shadow-md">
             {!isBgRemoving && (
               <ImageEditorCanvas
-                key={editorSrc}
+                key={typeof editorSrc === "string" ? editorSrc : `${editorContext}-${editorStage}`}
                 src={editorSrc}
                 ratio={
                   editorContext === "logo" || editorContext === "topup"

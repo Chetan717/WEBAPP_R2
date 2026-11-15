@@ -85,7 +85,7 @@ export default function MultiImagePicker({
       }
       const [next, ...rest] = prev;
       setActiveFile(next);
-      setEditingImage(URL.createObjectURL(next));
+      setEditingImage(next);
       setCropStage("initial");
       setCropOpen(true);
       return rest;
@@ -119,7 +119,7 @@ export default function MultiImagePicker({
       processingRef.current = true;
       const [first, ...rest] = files;
       setActiveFile(first);
-      setEditingImage(URL.createObjectURL(first));
+      setEditingImage(first);
       setCropStage("initial");
       setCropOpen(true);
       setPendingQueue((prev) => [...prev, ...rest]);
@@ -160,7 +160,7 @@ export default function MultiImagePicker({
         );
         if (controller.signal.aborted) return;
         toast.success("Background removed successfully! ✨");
-        setEditingImage(URL.createObjectURL(processed));
+        setEditingImage(processed);
         setCropStage("final");
         toast("Adjust the final crop, then tap Done.");
       } catch (err) {

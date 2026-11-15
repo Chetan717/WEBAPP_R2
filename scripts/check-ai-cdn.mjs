@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 
 const manifest = JSON.parse(await readFile(new URL("../r2-setup/manifest.json", import.meta.url), "utf8"));
 const base = String(process.env.VITE_ORT_ASSET_BASE_URL || "https://models.mlmposter.com/ort/1.21.0/").replace(/\/+$/, "") + "/";
@@ -16,7 +17,19 @@ for (const item of manifest.assets) {
     const allowed = response.headers.get("access-control-allow-origin");
     if (!response.ok) errors.push(`HTTP ${response.status}`);
     if (allowed !== "*" && allowed !== "https://app.mlmlive.in") errors.push("CORS header missing/wrong");
-    if (Number(response.headers.get("content-length")) !== item.size) errors.push("file size differs from package");
+    // Brotli responses often omit Content-Length (or report compressed bytes).
+    // Compare decoded bytes and SHA-256 instead of rejecting a healthy CDN.
+    const length = response.headers.get("content-length");
+    if (!length || response.headers.get("content-encoding") || Number(length) !== item.size) {
+      const downloaded = await fetch(url, {
+        headers: { Origin: "https://app.mlmlive.in" },
+        signal: AbortSignal.timeout(60000),
+      });
+      const bytes = new Uint8Array(await downloaded.arrayBuffer());
+      if (!downloaded.ok) errors.push(`download HTTP ${downloaded.status}`);
+      if (bytes.byteLength !== item.size) errors.push("decoded file size differs from package");
+      if (createHash("sha256").update(bytes).digest("hex") !== item.sha256) errors.push("file checksum differs from package");
+    }
     if (!response.headers.get("cache-control")?.includes("max-age=")) errors.push("Cache-Control missing");
     if (item.contentType === "application/wasm" && !response.headers.get("content-type")?.startsWith("application/wasm")) errors.push("WASM MIME should be application/wasm");
     console.log(errors.length ? "FAIL" : "PASS", item.key, errors.join("; "));

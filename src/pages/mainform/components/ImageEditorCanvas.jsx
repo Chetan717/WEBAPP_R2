@@ -1,4 +1,5 @@
 import CropEditorLayout from "../../../components/CropEditorLayout";
+import { getCropPixelRatio, observeCropWorkspace, releaseCropCanvas, loadCropImage } from "../../../utils/cropDeviceCompatibility";
 import { CROP_GUTTER, getCropViewportSize, getTopAlignedCropBox, hitCropHandle, resizeCropEdge, drawCropFrame, getCropExportSize } from "../../../utils/cropEditorGeometry";
 import { encodeCropCanvas } from "../../../utils/cropCanvasEncoder";
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -116,6 +117,7 @@ export default function ImageEditorCanvas({
   const [currentSrc, setCurrentSrc] = useState(src);
   const [isDoing, setIsDoing] = useState(false);
   const [isImageReady, setIsImageReady] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [isViewportReady, setIsViewportReady] = useState(false);
   const [encodeProgress, setEncodeProgress] = useState(0);
   const [zoom, setZoom] = useState(100);
@@ -252,9 +254,7 @@ export default function ImageEditorCanvas({
       }
     };
     measure();
-    const ro = new ResizeObserver(measure);
-    if (containerRef.current) ro.observe(containerRef.current);
-    return () => ro.disconnect();
+    return observeCropWorkspace(containerRef.current, measure);
   }, [RATIO]);
 
   // ── Image dim computation ─────────────────────────────────────
@@ -262,7 +262,7 @@ export default function ImageEditorCanvas({
     const rot90 = rot % 180 !== 0;
     const bw = rot90 ? ch : cw,
       bh = rot90 ? cw : ch;
-    const { dw, dh } = containDims(img.naturalWidth, img.naturalHeight, Math.max(1, bw - CROP_GUTTER * 2), Math.max(1, bh - CROP_GUTTER * 2));
+    const { dw, dh } = containDims((img.naturalWidth || img.width), (img.naturalHeight || img.height), Math.max(1, bw - CROP_GUTTER * 2), Math.max(1, bh - CROP_GUTTER * 2));
     return { dw: dw * (z / 100), dh: dh * (z / 100) };
   }
 
@@ -306,6 +306,7 @@ export default function ImageEditorCanvas({
     oc.width = cw * dpr;
     oc.height = ch * dpr;
     const ctx = oc.getContext("2d");
+    if (!ctx) { releaseCropCanvas(oc); return null; }
     ctx.scale(dpr, dpr);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
@@ -331,7 +332,7 @@ export default function ImageEditorCanvas({
     if (!canvas) return;
 
     const { w: cw, h: ch } = canvasSzRef.current;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getCropPixelRatio(window.devicePixelRatio);
 
     // Apply canvas dimensions only when changed (avoids expensive reset every frame)
     const ap = appliedSzRef.current;
@@ -346,14 +347,26 @@ export default function ImageEditorCanvas({
     }
 
     const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      setIsImageReady(false);
+      setLoadError("Photo preview could not start. Please select a smaller JPG or PNG photo.");
+      return;
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform fast
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 1. Draw cached image layer
     if (img) {
       if (offDirtyRef.current || !offscreenRef.current) {
-        offscreenRef.current = rebuildOffscreen(img, cw, ch, dpr);
+        const nextLayer = rebuildOffscreen(img, cw, ch, dpr);
+        releaseCropCanvas(offscreenRef.current);
+        offscreenRef.current = nextLayer;
         offDirtyRef.current = false;
+      }
+      if (!offscreenRef.current) {
+        setIsImageReady(false);
+        setLoadError("Photo preview could not start. Please select a smaller JPG or PNG photo.");
+        return;
       }
       ctx.drawImage(offscreenRef.current, 0, 0);
     }
@@ -393,8 +406,10 @@ export default function ImageEditorCanvas({
   // ── Load image ────────────────────────────────────────────────
   useEffect(() => {
     setIsImageReady(false);
+    setLoadError("");
     if (!currentSrc) return;
     imgRef.current = null;
+    releaseCropCanvas(offscreenRef.current);
     offscreenRef.current = null;
     offDirtyRef.current = true;
     zoomRef.current = 100;
@@ -415,35 +430,31 @@ export default function ImageEditorCanvas({
     const { w: cw, h: ch } = canvasSzRef.current;
     cropBoxRef.current = initBox(cw, ch, RATIO);
 
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    let url = null;
-
-    const doLoad = () => {
-      imgRef.current = img;
+    const controller = new AbortController();
+    let resource = null;
+    void loadCropImage(currentSrc, controller.signal).then((loaded) => {
+      if (controller.signal.aborted) { loaded.dispose(); return; }
+      resource = loaded;
+      imgRef.current = loaded.image;
       setIsImageReady(true);
-      const { w: cw, h: ch } = canvasSzRef.current;
-      cropBoxRef.current = initialCropBox(img, cw, ch);
+      const { w, h } = canvasSzRef.current;
+      cropBoxRef.current = initialCropBox(loaded.image, w, h);
       offDirtyRef.current = true;
       scheduleDraw();
-    };
-
-    img.onload = doLoad;
-    img.onerror = () => {
+      document.dispatchEvent(new Event("mlmlive:crop-image-ready"));
+    }).catch((error) => {
+      if (controller.signal.aborted || error?.name === "AbortError") return;
       setIsImageReady(false);
-      toast.danger("Selected photo could not be loaded. Please choose it again.");
-    };
-    if (currentSrc instanceof Blob) {
-      url = URL.createObjectURL(currentSrc);
-      img.src = url;
-    } else img.src = currentSrc;
-    if (img.complete && img.naturalWidth > 0) doLoad();
+      setLoadError(error?.message || "Selected photo could not be loaded. Please choose a JPG, PNG or WebP photo again.");
+      document.dispatchEvent(new Event("mlmlive:crop-image-ready"));
+    });
     return () => {
-      img.onload = null;
-      img.onerror = null;
-      if (url) URL.revokeObjectURL(url);
+      controller.abort();
+      resource?.dispose();
+      imgRef.current = null;
+      releaseCropCanvas(offscreenRef.current);
+      offscreenRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSrc]);
 
   useEffect(() => {
@@ -604,7 +615,7 @@ export default function ImageEditorCanvas({
     const box = cropBoxRef.current || initBox(cw, ch, RATIO);
 
     const { dw, dh } = imgDims(img, cw, ch, rot, z);
-    const nativeLongestSide = Math.max(box.w, box.h) * img.naturalWidth / dw;
+    const nativeLongestSide = Math.max(box.w, box.h) * (img.naturalWidth || img.width) / dw;
     const { width: outW, height: outH } = getCropExportSize(RATIO, nativeLongestSide, enableEnhance);
     const scale = outW / box.w;
 
@@ -707,7 +718,7 @@ export default function ImageEditorCanvas({
         setIsDoing(false);
         setEncodeProgress(0);
         toast.danger("Photo could not be saved. Please tap Done again.");
-      });
+      }).finally(() => releaseCropCanvas(out));
   };
 
   const onCancelClick = () => {
@@ -726,10 +737,17 @@ export default function ImageEditorCanvas({
       onCancel={onCancelClick}
       onDone={handleDone}
     >
+      {loadError ? (
+        <p role="alert" style={{ padding: 24, maxWidth: 360, color: "#ffffff", textAlign: "center", lineHeight: 1.6 }}>
+          {loadError} Use Cancel to choose another photo.
+        </p>
+      ) : !isImageReady ? (
+        <p role="status" style={{ color: "#ffffff", textAlign: "center" }}>Opening photo…</p>
+      ) : null}
       <canvas
         ref={canvasRef}
         aria-label="Photo crop area"
-        style={{ touchAction: "none", display: "block", cursor: "grab" }}
+        style={{ touchAction: "none", display: isImageReady && !loadError ? "block" : "none", cursor: "grab" }}
         onMouseDown={onDown}
         onMouseMove={onMove}
         onMouseUp={onUp}

@@ -36,6 +36,17 @@ export default function ImageUploadWithBgRemove({
   const [progressPct, setProgressPct] = useState(0);
   const [dots, setDots] = useState("");
   const [processingPreview, setProcessingPreview] = useState(null);
+  const [currentPreview, setCurrentPreview] = useState(null);
+
+  useEffect(() => {
+    if (!(currentImage instanceof Blob)) {
+      setCurrentPreview(currentImage || null);
+      return undefined;
+    }
+    const url = URL.createObjectURL(currentImage);
+    setCurrentPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [currentImage]);
 
   // Begin the quality model download as soon as the photo/editor control is on
   // screen. There is no short timeout downgrade; removeBg() reuses this exact
@@ -95,9 +106,8 @@ export default function ImageUploadWithBgRemove({
   };
 
   const openFinalCrop = (image, canEnhance = false) => {
-    const preview = image instanceof Blob ? URL.createObjectURL(image) : image;
     setEnhanceEnabled?.(canEnhance);
-    setEditingImage(preview);
+    setEditingImage(image);
     setOnImageDone(() => (finalBlob) => {
       onImageReady(finalBlob);
       setEnhanceEnabled?.(false);
@@ -244,14 +254,13 @@ export default function ImageUploadWithBgRemove({
 
     // Standard photo flow: crop the original first. Its Done callback removes
     // the background and reopens the result for a second/final crop.
-    const preview = URL.createObjectURL(file);
     setEnhanceEnabled?.(false);
-    setEditingImage(preview);
+    setEditingImage(file);
     setOnImageDone(() => removeBackgroundAfterCrop);
     setOpen(true);
   };
 
-  const src = currentImage instanceof Blob ? URL.createObjectURL(currentImage) : currentImage;
+  const src = currentImage instanceof Blob ? currentPreview : currentImage;
 
   return (
     <div data-guide={guideTarget}>
