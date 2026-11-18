@@ -419,7 +419,7 @@ const FadeLeftFilter = (imageData) => {
 };
 
 const NO_FOOTER_TYPES = new Set([
-  // "Product",
+  "Product",
   ...RANK_PROMOTION_TYPES,
   "Bonanza",
   "Domestic_Trip",
@@ -3261,9 +3261,7 @@ function GeneralEditPage({
                                       y={GURU_SLOT_PADDING}
                                       width={GURU_INNER_SIZE}
                                       height={GURU_INNER_SIZE}
-                                      crop={getTopUplineHeadCrop(
-                                        slot.img,
-                                      )}
+                                      crop={getTopUplineHeadCrop(slot.img)}
                                       onTap={() => setIsOpen(true)}
                                       onClick={() => setIsOpen(true)}
                                     />
@@ -4026,6 +4024,7 @@ function GeneralEditPage({
                     image={Imagefooter}
                     x={320}
                     y={280}
+                    listening={true}
                     width={350}
                     height={41}
                     onClick={() => setIsOpenFtr(true)}
@@ -4036,6 +4035,7 @@ function GeneralEditPage({
                     image={Imagefooter}
                     x={0}
                     y={280}
+                    listening
                     width={350}
                     height={41}
                     onClick={() => setIsOpenFtr(true)}
@@ -4047,6 +4047,7 @@ function GeneralEditPage({
                   isRight ? (
                     <Image
                       image={Imagefooter}
+                      listening={true}
                       x={0}
                       y={280}
                       width={350}
@@ -4059,6 +4060,7 @@ function GeneralEditPage({
                       scaleX={-1}
                       scaleY={1}
                       image={Imagefooter}
+                      listening={true}
                       x={320}
                       y={280}
                       width={350}
@@ -4068,6 +4070,7 @@ function GeneralEditPage({
                     />
                   )
                 ) : null}
+
                 {isSubGeneralType ||
                 (isMeeting && meetingData?.hostMode === "none") ||
                 !ImageProfile
