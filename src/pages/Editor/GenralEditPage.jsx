@@ -419,7 +419,6 @@ const FadeLeftFilter = (imageData) => {
 };
 
 const NO_FOOTER_TYPES = new Set([
-  "Product",
   ...RANK_PROMOTION_TYPES,
   "Bonanza",
   "Domestic_Trip",
