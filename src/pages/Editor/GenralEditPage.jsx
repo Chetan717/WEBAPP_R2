@@ -4296,7 +4296,7 @@ function GeneralEditPage({
                       text={`+91${profileMobile}` || "+91XXXXXXXXXX"}
                       fontSize={fs(7.5)}
                       fontStyle="1000"
-                      fill={isProduct ? `black` : `white`}
+                      fill={`white`}
                       letterSpacing={0}
                       verticalAlign="end"
                       align="end"
