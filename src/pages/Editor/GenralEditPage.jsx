@@ -4005,7 +4005,7 @@ function GeneralEditPage({
                         text={`+91${profileMobile}` || "+91XXXXXXXXXX"}
                         fontSize={fs(6)}
                         fontStyle="1000"
-                        fill={isProduct ? `black` : `white`}
+                        fill={`white`}
                         letterSpacing={0}
                         verticalAlign="center"
                         align="center"
@@ -4069,7 +4069,6 @@ function GeneralEditPage({
                     />
                   )
                 ) : null}
-
                 {isSubGeneralType ||
                 (isMeeting && meetingData?.hostMode === "none") ||
                 !ImageProfile
@@ -4319,11 +4318,11 @@ function GeneralEditPage({
                                   ? 233
                                   : 252
                           }
-                          y={ isRank_B ? 294 : 298}
+                          y={isRank_B ? 294 : 298}
                           width={150}
                           height={5}
                           text="CALL FOR ASSOCIATION"
-                          fontSize={fs( 4.5)}
+                          fontSize={fs(4.5)}
                           fill={`white`}
                           fontStyle="bold"
                           verticalAlign="middle"
@@ -4341,7 +4340,7 @@ function GeneralEditPage({
                                   ? 230
                                   : 250
                           }
-                          y={ isRank_B ? 294 : 297}
+                          y={isRank_B ? 294 : 297}
                           width={150}
                           height={20}
                           text={`+91${profileMobile}` || "+91XXXXXXXXXX"}
@@ -4435,13 +4434,13 @@ function GeneralEditPage({
                       <>
                         <Text
                           fontFamily="Montserrat"
-                          x={isProduct ? 13 : isRank_B ? 38 : 30}
-                          y={isProduct ? 299.5 : isRank_B ? 295 : 298}
+                          x={isRank_B ? 38 : 30}
+                          y={isRank_B ? 295 : 298}
                           width={150}
                           height={5}
                           text="CALL FOR ASSOCIATION" //ORIGINAL CALL
-                          fontSize={fs(isProduct ? 5.5 : 4.5)}
-                          fill={isProduct ? `black` : `white`}
+                          fontSize={fs(4.5)}
+                          fill={`white`}
                           fontStyle="bold"
                           verticalAlign="middle"
                           onClick={() => setIsOpenFtr(true)}
@@ -4449,13 +4448,13 @@ function GeneralEditPage({
                         />
                         <Text
                           fontFamily="Montserrat"
-                          x={isProduct ? 15 : isRank_B ? 36 : 28}
-                          y={isProduct ? 299.5 : isRank_B ? 295 : 297}
+                          x={ isRank_B ? 36 : 28}
+                          y={ isRank_B ? 295 : 297}
                           width={150}
                           height={20}
                           text={`+91${profileMobile}` || "+91XXXXXXXXXX"}
                           fontSize={fs(7.5)}
-                          fill={isProduct ? `black` : `white`}
+                          fill={`white`}
                           fontStyle="bold"
                           verticalAlign="middle"
                           onClick={() => setIsOpenFtr(true)}
@@ -4608,7 +4607,7 @@ function GeneralEditPage({
                             height={5}
                             text="CALL FOR ASSOCIATION"
                             fontSize={fs(4.5)}
-                            fill={isProduct ? `black` : `white`}
+                            fill={`white`}
                             fontStyle="bold"
                             verticalAlign="middle"
                             onClick={() => setIsOpenFtr(true)}
@@ -4622,7 +4621,7 @@ function GeneralEditPage({
                             height={20}
                             text={`+91${profileMobile}` || "+91XXXXXXXXXX"}
                             fontSize={fs(7.5)}
-                            fill={isProduct ? `black` : `white`}
+                            fill={`white`}
                             fontStyle="bold"
                             verticalAlign="middle"
                             onClick={() => setIsOpenFtr(true)}
@@ -4712,7 +4711,7 @@ function GeneralEditPage({
                             height={5}
                             text="CALL FOR ASSOCIATION"
                             fontSize={fs(4.5)}
-                            fill={isProduct ? `black` : `white`}
+                            fill={`white`}
                             fontStyle="bold"
                             verticalAlign="middle"
                             onClick={() => setIsOpenFtr(true)}
@@ -4726,7 +4725,7 @@ function GeneralEditPage({
                             height={20}
                             text={`+91${profileMobile}` || "+91XXXXXXXXXX"}
                             fontSize={fs(7.5)}
-                            fill={isProduct ? `black` : `white`}
+                            fill={`white`}
                             fontStyle="bold"
                             verticalAlign="middle"
                             onClick={() => setIsOpenFtr(true)}
