@@ -4319,12 +4319,12 @@ function GeneralEditPage({
                                   ? 233
                                   : 252
                           }
-                          y={isProduct ? 297.5 : isRank_B ? 294 : 298}
+                          y={ isRank_B ? 294 : 298}
                           width={150}
                           height={5}
                           text="CALL FOR ASSOCIATION"
-                          fontSize={fs(isProduct ? 5.5 : 4.5)}
-                          fill={isProduct ? `black` : `white`}
+                          fontSize={fs( 4.5)}
+                          fill={`white`}
                           fontStyle="bold"
                           verticalAlign="middle"
                           onClick={() => setIsOpenFtr(true)}
@@ -4341,12 +4341,12 @@ function GeneralEditPage({
                                   ? 230
                                   : 250
                           }
-                          y={isProduct ? 298 : isRank_B ? 294 : 297}
+                          y={ isRank_B ? 294 : 297}
                           width={150}
                           height={20}
                           text={`+91${profileMobile}` || "+91XXXXXXXXXX"}
                           fontSize={fs(7.5)}
-                          fill={isProduct ? `black` : `white`}
+                          fill={`white`}
                           fontStyle="bold"
                           verticalAlign="middle"
                           onClick={() => setIsOpenFtr(true)}
